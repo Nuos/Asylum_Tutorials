@@ -130,7 +130,7 @@ void Render(float alpha, float elapsedtime)
 	device->Clear(0, NULL, D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER, 0xff6694ed, 1.0f, 0);
 	device->SetTexture(0, tex);
 
-	D3DXMatrixRotationAxis(&world, &axis, timeGetTime() / 1000.0f);
+	D3DXMatrixRotationAxis(&world, &axis, (timeGetTime() % 6284) / 1000.0f);
 	D3DXMatrixMultiply(&wvp, &world, &view);
 	D3DXMatrixMultiply(&wvp, &wvp, &proj);
 

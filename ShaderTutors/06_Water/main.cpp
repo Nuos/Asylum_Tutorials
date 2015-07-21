@@ -181,7 +181,7 @@ void Render(float alpha, float elapsedtime)
 	D3DXMatrixInverse(&inv, NULL, &view);
 
 	effect->SetVector("eyePos", (D3DXVECTOR4*)inv.m[3]);
-	effect->SetFloat("time", (float)timeGetTime() / 1000.0f);
+	effect->SetFloat("time", (timeGetTime() % 6284) / 1000.0f);
 
 	D3DXMatrixInverse(&inv, NULL, &world);
 

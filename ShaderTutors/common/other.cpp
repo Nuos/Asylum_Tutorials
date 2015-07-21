@@ -174,11 +174,10 @@ int main(int argc, char* argv[])
 	double last, current;
 	double delta, accum = 0;
 
-	// ablak osztály
 	WNDCLASSEX wc =
 	{
 		sizeof(WNDCLASSEX),
-		CS_CLASSDC,
+		CS_OWNDC,
 		(WNDPROC)WndProc,
 		0L,
 		0L,
@@ -194,7 +193,7 @@ int main(int argc, char* argv[])
 	RECT rect = { 0, 0, screenwidth, screenheight };
 	DWORD style = WS_CLIPCHILDREN|WS_CLIPSIBLINGS;
 
-	// ablakos mód
+	// windowed mode
 	style |= WS_SYSMENU|WS_BORDER|WS_CAPTION;
 	Adjust(rect, screenwidth, screenheight, style, 0);
 
@@ -235,14 +234,18 @@ int main(int argc, char* argv[])
 	tickspersec = qwTicksPerSec.QuadPart;
 
 	QueryPerformanceCounter(&qwTime);
-	last = (double)qwTime.QuadPart / (double)tickspersec;
+	last = (qwTime.QuadPart % tickspersec) / (double)tickspersec;
 
 	while( msg.message != WM_QUIT )
 	{
 		QueryPerformanceCounter(&qwTime);
 
-		current = (double)qwTime.QuadPart / (double)tickspersec;
-		delta = (current - last);
+		current = (qwTime.QuadPart % tickspersec) / (double)tickspersec;
+
+		if (current < last)
+			delta = ((1.0 + current) - last);
+		else
+			delta = (current - last);
 
 		last = current;
 		accum += delta;

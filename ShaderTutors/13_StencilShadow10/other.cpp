@@ -596,7 +596,7 @@ int main(int argc, char* argv[])
 	WNDCLASSEX wc =
 	{
 		sizeof(WNDCLASSEX),
-		CS_CLASSDC,
+		CS_OWNDC,
 		(WNDPROC)WndProc,
 		0L,
 		0L,
@@ -651,14 +651,18 @@ int main(int argc, char* argv[])
 	tickspersec = qwTicksPerSec.QuadPart;
 
 	QueryPerformanceCounter(&qwTime);
-	last = (double)qwTime.QuadPart / (double)tickspersec;
+	last = (qwTime.QuadPart % tickspersec) / (double)tickspersec;
 
 	while( msg.message != WM_QUIT )
 	{
 		QueryPerformanceCounter(&qwTime);
 
-		current = (double)qwTime.QuadPart / (double)tickspersec;
-		delta = (current - last);
+		current = (qwTime.QuadPart % tickspersec) / (double)tickspersec;
+
+		if (current < last)
+			delta = ((1.0 + current) - last);
+		else
+			delta = (current - last);
 
 		last = current;
 		accum += delta;

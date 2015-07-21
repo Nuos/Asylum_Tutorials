@@ -372,8 +372,8 @@ private:
 			GLMatrixIdentity(texmat);
 
 			glBindTexture(GL_TEXTURE_2D, texid);
-			glDisable(GL_DEPTH_TEST);
-			
+
+			context->SetDepthTest(GL_FALSE);
 			context->Clear(GL_COLOR_BUFFER_BIT, OpenGLColor(0, 0, 0, 1));
 
 			effect->SetInt("sampler0", 0);
@@ -383,18 +383,15 @@ private:
 				screenquad->Draw();
 
 				texid = item->GetFeedbackLayer().GetRenderTarget()->GetColorAttachment(0);
-				
 				glBindTexture(GL_TEXTURE_2D, texid);
-				glEnable(GL_BLEND);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+				context->SetBlendMode(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 				screenquad->Draw();
-
-				glDisable(GL_BLEND);
+				context->SetBlendMode(GL_NONE, GL_NONE);
 			}
 			effect->End();
 
-			glEnable(GL_DEPTH_TEST);
+			context->SetDepthTest(GL_TRUE);
 		}
 
 		context->Present(universeid);

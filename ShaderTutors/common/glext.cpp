@@ -100,7 +100,7 @@ static Gdiplus::Bitmap* Win32LoadPicture(const std::wstring& file)
 	DWORD len = GetFileSize(hFile, NULL);
 	HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE|GMEM_NODISCARD, len); // leak
 
-	if ( !hGlobal )
+	if( !hGlobal )
 	{
 		CloseHandle(hFile);
 		return 0;
@@ -2303,7 +2303,7 @@ void GLGetOrthogonalVectors(float out1[3], float out2[3], const float v[3])
 	out2[other2] = -v[bestcoord];
 }
 
-void GLRenderTextEx(const std::string& str, GLuint tex, GLsizei width, GLsizei height)
+void GLRenderText(const std::string& str, GLuint tex, GLsizei width, GLsizei height)
 {
 	GLRenderTextEx(str, tex, width, height, L"Arial", 1, Gdiplus::FontStyleBold, 25);
 }

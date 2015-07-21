@@ -610,7 +610,6 @@ int main(int argc, char* argv[])
 	double last, current;
 	double delta, accum = 0;
 
-	// ablak osztály
 	WNDCLASSEX wc =
 	{
 		sizeof(WNDCLASSEX),
@@ -647,7 +646,7 @@ int main(int argc, char* argv[])
 		MYERROR("Failed to initialize OpenGL");
 		goto _end;
 	}
-	
+
 	if( !InitScene() )
 	{
 		MYERROR("Failed to initialize scene");
@@ -663,20 +662,24 @@ int main(int argc, char* argv[])
 	POINT p;
 	GetCursorPos(&p);
 	ScreenToClient(hwnd, &p);
-	
+
 	// timer
 	QueryPerformanceFrequency(&qwTicksPerSec);
 	tickspersec = qwTicksPerSec.QuadPart;
 
 	QueryPerformanceCounter(&qwTime);
-	last = (double)qwTime.QuadPart / (double)tickspersec;
+	last = (qwTime.QuadPart % tickspersec) / (double)tickspersec;
 
 	while( msg.message != WM_QUIT )
 	{
 		QueryPerformanceCounter(&qwTime);
 
-		current = (double)qwTime.QuadPart / (double)tickspersec;
-		delta = (current - last);
+		current = (qwTime.QuadPart % tickspersec) / (double)tickspersec;
+
+		if (current < last)
+			delta = ((1.0 + current) - last);
+		else
+			delta = (current - last);
 
 		last = current;
 		accum += delta;

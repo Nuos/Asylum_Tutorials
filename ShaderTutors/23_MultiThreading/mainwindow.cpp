@@ -170,7 +170,7 @@ void OpenGLAddonTask::Internal_Render(IRenderingContext* context)
 
 	// setup states (TODO:)
 	context->SetCullMode(GL_BACK);
-	context->SetDepthTest(true);
+	context->SetDepthTest(GL_TRUE);
 	context->SetDepthFunc(GL_LEQUAL);
 
 	// render

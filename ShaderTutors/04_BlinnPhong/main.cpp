@@ -135,7 +135,7 @@ void Render(float alpha, float elapsedtime)
 	
 	effect->SetVector("eyePos", (D3DXVECTOR4*)inv.m[3]);
 
-	D3DXMatrixRotationAxis(&world, &axis, timeGetTime() / 1000.0f);
+	D3DXMatrixRotationAxis(&world, &axis, (timeGetTime() % 6284) / 1000.0f);
 	D3DXMatrixInverse(&inv, NULL, &world);
 
 	effect->SetMatrix("matWorld", &world);

@@ -26,6 +26,7 @@ public:
 	virtual OpenGLMesh*			CreateMesh(GLuint numvertices, GLuint numindices, GLuint flags, OpenGLVertexElement* decl) = 0;
 
 	// renderstate methods
+	virtual void SetBlendMode(GLenum src, GLenum dst) = 0;
 	virtual void SetCullMode(GLenum mode) = 0;
 	virtual void SetDepthTest(GLboolean enable) = 0;
 	virtual void SetDepthFunc(GLenum func) = 0;

@@ -140,7 +140,7 @@ Win32Window::Win32Window(long x, long y, long width, long height)
 
 	MoveWindow(hwnd, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, FALSE);
 
-	hdc = GetDC(hwnd);
+	hdc			= 0;
 	glcontextid	= -1;
 	drawingitem	= 0;
 
@@ -233,14 +233,18 @@ void Win32Window::MessageHook()
 	tickspersec = qwTicksPerSec.QuadPart;
 
 	QueryPerformanceCounter(&qwTime);
-	last = (double)qwTime.QuadPart / (double)tickspersec;
+	last = (qwTime.QuadPart % tickspersec) / (double)tickspersec;
 
 	while( msg.message != WM_QUIT )
 	{
 		QueryPerformanceCounter(&qwTime);
 
-		current = (double)qwTime.QuadPart / (double)tickspersec;
-		delta = (current - last);
+		current = (qwTime.QuadPart % tickspersec) / (double)tickspersec;
+
+		if (current < last)
+			delta = ((1.0 + current) - last);
+		else
+			delta = (current - last);
 
 		last = current;
 		accum += delta;

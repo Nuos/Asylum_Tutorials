@@ -85,6 +85,7 @@ public:
 	OpenGLMesh*			CreateMesh(GLuint numvertices, GLuint numindices, GLuint flags, OpenGLVertexElement* decl);
 
 	// renderstate methods
+	void SetBlendMode(GLenum src, GLenum dst);
 	void SetCullMode(GLenum mode);
 	void SetDepthTest(GLboolean enable);
 	void SetDepthFunc(GLenum func);
@@ -249,6 +250,17 @@ HDC RenderingCore::PrivateInterface::GetDC(int id) const
 
 	const OpenGLContext& context = contexts[id];
 	return context.hdc;
+}
+
+void RenderingCore::PrivateInterface::SetBlendMode(GLenum src, GLenum dst)
+{
+	if( src == GL_ZERO && dst == GL_ZERO )
+		glDisable(GL_BLEND);
+	else
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(src, dst);
+	}
 }
 
 void RenderingCore::PrivateInterface::SetCullMode(GLenum mode)
