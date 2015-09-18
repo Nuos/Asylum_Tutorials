@@ -1,0 +1,76 @@
+
+#define ONE_OVER_PI	0.318309
+#define PI			3.1415926535897932
+#define TWOPI		6.2831853071795864
+#define NUM_MIPS	8
+
+uniform sampler2D sampler0;		// albedo
+
+uniform vec4 baseColor;
+uniform vec4 matParams;			// roughness, metalness, hastexture, hasnormalmap
+
+vec3 F_Schlick(vec3 f0, float u)
+{
+	return f0 + (vec3(1.0) - f0) * pow(1.0 - u, 5.0);
+}
+
+float D_GGX(float ndoth, float roughness)
+{
+	float m = roughness * roughness;
+	float m2 = m * m;
+	float d = (ndoth * m2 - ndoth) * ndoth + 1.0;
+
+	return m2 / (PI * d * d);
+}
+
+float Vis_Schlick(float ndotl, float ndotv, float roughness)
+{
+	// = G_Schlick / (4 * ndotv * ndotl)
+	float a = roughness + 1.0;
+	float k = a * a * 0.125;
+
+	float Vis_SchlickV = ndotv * (1 - k) + k;
+	float Vis_SchlickL = ndotl * (1 - k) + k;
+
+	return 0.25 / (Vis_SchlickV * Vis_SchlickL);
+}
+
+vec4 BRDF_Lambertian(vec2 tex)
+{
+	vec4 albedo = texture(sampler0, tex);
+	vec4 color = mix(baseColor, albedo, matParams.z);
+
+	color.rgb = mix(color.rgb, vec3(0.0), matParams.y);
+	color.rgb *= ONE_OVER_PI;
+
+	return color;
+}
+
+vec3 BRDF_CookTorrance(float ldoth, float ndoth, float ndotv, float ndotl, float roughness)
+{
+	vec3 F0 = mix(vec3(0.04), baseColor.rgb, matParams.y);
+	vec3 F = F_Schlick(F0, ldoth);
+
+	float Vis = Vis_Schlick(ndotl, ndotv, roughness);
+	float D = D_GGX(ndoth, roughness);
+
+	return F * Vis * D;
+}
+
+float VarianceShadow2D(sampler2D shadowmap, vec4 cpos, vec2 nf)
+{
+	vec2 projpos = (cpos.xy / cpos.w) * 0.5 + 0.5;
+	vec2 moments = texture(shadowmap, projpos).xy;
+
+	float d01		= (cpos.z * 0.5 + 0.5);
+	float z			= ((cpos.w < 0.0) ? -cpos.w : d01);
+	float d			= (z - nf.x) / (nf.y - nf.x);
+	float mean		= moments.x;
+	float variance	= max(moments.y - moments.x * moments.x, 1e-5);
+	float md		= mean - d;
+	float pmax		= variance / (variance + md * md);
+
+	pmax = smoothstep(0.3, 1.0, pmax);
+
+	return max(d <= mean ? 1.0 : 0.0, pmax);
+}

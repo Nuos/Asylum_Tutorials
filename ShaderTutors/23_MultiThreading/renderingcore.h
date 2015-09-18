@@ -4,7 +4,7 @@
 
 #include "../common/thread.h"
 #include "../common/blockingqueue.hpp"
-#include "../common/glext.h"
+#include "../common/gl4x.h"
 
 #define SAFE_DELETE(x)		if( (x) ) { delete (x); (x) = 0; }
 

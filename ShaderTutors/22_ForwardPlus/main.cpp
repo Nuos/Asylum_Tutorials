@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include <iostream>
 
-#include "../common/glext.h"
+#include "../common/gl4x.h"
 
 // TODO:
 // - padlora normalmap
@@ -27,9 +27,6 @@ extern HWND		hwnd;
 extern HDC		hdc;
 extern long		screenwidth;
 extern long		screenheight;
-extern short	mousedx;
-extern short	mousedy;
-extern short	mousedown;
 
 // sample structures
 struct LightParticle
@@ -77,6 +74,10 @@ GLuint				workgroupsx		= 0;
 GLuint				workgroupsy		= 0;
 int					timeout			= 0;
 bool				hascompute		= false;
+
+short				mousedx			= 0;
+short				mousedy			= 0;
+short				mousedown		= 0;
 
 array_state<float, 2> cameraangle;
 
@@ -314,7 +315,7 @@ bool InitScene()
 		}
 
 		// light culling shader
-		if( !GLCreateComputeProgramFromFile("../media/shadersGL/lightcull.comp", 0, &lightcull) )
+		if( !GLCreateComputeProgramFromFile("../media/shadersGL/lightcull.comp", &lightcull) )
 		{
 			MYERROR("Could not load light culling shader");
 			return false;
@@ -376,12 +377,28 @@ void UninitScene()
 	GLKillAnyRogueObject();
 }
 //*************************************************************************************************************
-void KeyPress(WPARAM wparam)
+void Event_KeyDown(unsigned char keycode)
 {
 }
 //*************************************************************************************************************
-void MouseMove()
+void Event_KeyUp(unsigned char keycode)
 {
+}
+//*************************************************************************************************************
+void Event_MouseMove(int x, int y, short dx, short dy)
+{
+	mousedx += dx;
+	mousedy += dy;
+}
+//*************************************************************************************************************
+void Event_MouseDown(int x, int y, unsigned char button)
+{
+	mousedown = 1;
+}
+//*************************************************************************************************************
+void Event_MouseUp(int x, int y, unsigned char button)
+{
+	mousedown = 0;
 }
 //*************************************************************************************************************
 void UpdateParticles(float dt, bool generate)
@@ -401,7 +418,7 @@ void UpdateParticles(float dt, bool generate)
 
 	if( generate )
 	{
-		int segments = isqrt(NUM_LIGHTS);
+		int segments = GLISqrt(NUM_LIGHTS);
 		float theta, phi;
 
 		OpenGLColor randomcolors[3] =
@@ -642,6 +659,7 @@ void Render(float alpha, float elapsedtime)
 	float up[3]				= { 0, 1, 0 };
 
 	float screensize[2]		= { (float)screenwidth, (float)screenheight };
+	float lightclip[2];
 	float clipplanes[2];
 	float orient[2];
 
@@ -667,13 +685,14 @@ void Render(float alpha, float elapsedtime)
 	moonlight[1] = 0.65f;
 
 	GLMatrixViewVector(lightview, moonlight);
-	GLFitToBox(lightproj, lightview, scenebox);
+	GLFitToBox(lightproj, lightclip, lightview, scenebox);
 	GLMatrixMultiply(lightviewproj, lightview, lightproj);
 
 	// render shadow map
 	glClearColor(0, 0, 0, 1);
 
 	varianceshadow->SetMatrix("matViewProj", lightviewproj);
+	varianceshadow->SetVector("clipPlanes", lightclip);
 
 	shadowmap->Set();
 	{
@@ -693,9 +712,6 @@ void Render(float alpha, float elapsedtime)
 	glDepthMask(GL_FALSE);
 	glBindTexture(GL_TEXTURE_2D, shadowmap->GetColorAttachment(0));
 
-	GLMatrixIdentity(texmat);
-
-	boxblur3x3->SetMatrix("matTexture", texmat);
 	boxblur3x3->SetMatrix("texelSize", texelsize);
 	boxblur3x3->SetInt("sampler0", 0);
 
@@ -804,6 +820,7 @@ void Render(float alpha, float elapsedtime)
 	shadowedlight->SetVector("eyePos", eye);
 	shadowedlight->SetVector("lightPos", moonlight);
 	shadowedlight->SetVector("lightColor", mooncolor);
+	shadowedlight->SetVector("clipPlanes", lightclip);
 	shadowedlight->SetInt("sampler0", 0);
 	shadowedlight->SetInt("sampler1", 1);
 
@@ -846,10 +863,7 @@ void Render(float alpha, float elapsedtime)
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, framebuffer->GetColorAttachment(0));
 
-	GLMatrixIdentity(texmat);
-
 	gammacorrect->SetInt("sampler0", 0);
-	gammacorrect->SetMatrix("matTexture", texmat);
 	gammacorrect->Begin();
 	{
 		screenquad->Draw();
@@ -865,5 +879,6 @@ void Render(float alpha, float elapsedtime)
 #endif
 
 	SwapBuffers(hdc);
+	mousedx = mousedy = 0;
 }
 //*************************************************************************************************************

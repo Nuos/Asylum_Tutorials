@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include <iostream>
 
-#include "../common/glext.h"
+#include "../common/gl4x.h"
 
 // TODO:
 // - ARB_clear_buffer_object
@@ -20,14 +20,11 @@ extern HWND		hwnd;
 extern HDC		hdc;
 extern long		screenwidth;
 extern long		screenheight;
-extern short	mousedx;
-extern short	mousedy;
-extern short	mousedown;
 
 // sample structures
 struct SceneObject
 {
-	int type;			// 0 for box, 1 for dragon
+	int type;			// 0 for box, 1 for dragon, 2 for buddha
 	float position[3];
 	float scale[3];
 	float angle;
@@ -36,7 +33,7 @@ struct SceneObject
 
 // sample variables
 OpenGLMesh*			box				= 0;
-OpenGLMesh*			angel			= 0;
+OpenGLMesh*			buddha			= 0;
 OpenGLMesh*			dragon			= 0;
 OpenGLEffect*		init			= 0;
 OpenGLEffect*		collect			= 0;
@@ -49,6 +46,10 @@ GLuint				headbuffer		= 0;
 GLuint				nodebuffer		= 0;
 GLuint				counterbuffer	= 0;
 
+short				mousedx			= 0;
+short				mousedy			= 0;
+short				mousedown		= 0;
+
 array_state<float, 2> cameraangle;
 
 SceneObject objects[] =
@@ -59,7 +60,7 @@ SceneObject objects[] =
 	{ 1, { 2.5f, -0.1f, 0 }, { 0.3f, 0.3f, 0.3f }, M_PI / -2 + M_PI / -6, OpenGLColor(0, 1, 1, 0.5f) },
 	{ 1, { -2, -0.1f, -2 }, { 0.3f, 0.3f, 0.3f }, M_PI / -4, OpenGLColor(1, 0, 0, 0.5f) },
 
-	{ 2, { 0, 0, 0 }, { 0.015f, 0.015f, 0.015f }, M_PI, OpenGLColor(0, 1, 0, 0.5f) },
+	{ 2, { 0, -1.15f, 0 }, { 20, 20, 20 }, M_PI, OpenGLColor(0, 1, 0, 0.5f) },
 };
 
 const int numobjects = sizeof(objects) / sizeof(SceneObject);
@@ -127,9 +128,9 @@ bool InitScene()
 
 	delete[] materials;
 
-	if( !GLCreateMeshFromQM("../media/meshes/angel.qm", &materials, &nummaterials, &angel) )
+	if( !GLCreateMeshFromQM("../media/meshes/happy1.qm", &materials, &nummaterials, &buddha) )
 	{
-		MYERROR("Could not load angel");
+		MYERROR("Could not load buddha");
 		return false;
 	}
 
@@ -193,7 +194,7 @@ bool InitScene()
 		else if( obj.type == 1 )
 			tmpbox = dragon->GetBoundingBox();
 		else if( obj.type == 2 )
-			tmpbox = angel->GetBoundingBox();
+			tmpbox = buddha->GetBoundingBox();
 
 		tmpbox.TransformAxisAligned(world);
 
@@ -233,7 +234,7 @@ void UninitScene()
 	SAFE_DELETE(screenquad);
 	SAFE_DELETE(box);
 	SAFE_DELETE(dragon);
-	SAFE_DELETE(angel);
+	SAFE_DELETE(buddha);
 	SAFE_DELETE(init);
 	SAFE_DELETE(collect);
 	SAFE_DELETE(render);
@@ -253,12 +254,28 @@ void UninitScene()
 	GLKillAnyRogueObject();
 }
 //*************************************************************************************************************
-void KeyPress(WPARAM wparam)
+void Event_KeyDown(unsigned char keycode)
 {
 }
 //*************************************************************************************************************
-void MouseMove()
+void Event_KeyUp(unsigned char keycode)
 {
+}
+//*************************************************************************************************************
+void Event_MouseMove(int x, int y, short dx, short dy)
+{
+	mousedx += dx;
+	mousedy += dy;
+}
+//*************************************************************************************************************
+void Event_MouseDown(int x, int y, unsigned char button)
+{
+	mousedown = 1;
+}
+//*************************************************************************************************************
+void Event_MouseUp(int x, int y, unsigned char button)
+{
+	mousedown = 0;
 }
 //*************************************************************************************************************
 void Update(float delta)
@@ -359,7 +376,7 @@ void Render(float alpha, float elapsedtime)
 			else if( obj.type == 1 )
 				dragon->DrawSubset(0);
 			else if( obj.type == 2 )
-				angel->DrawSubset(0);
+				buddha->DrawSubset(0);
 		}
 	}
 	collect->End();
@@ -396,5 +413,6 @@ void Render(float alpha, float elapsedtime)
 #endif
 
 	SwapBuffers(hdc);
+	mousedx = mousedy = 0;
 }
 //*************************************************************************************************************

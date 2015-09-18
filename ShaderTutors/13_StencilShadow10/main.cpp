@@ -384,8 +384,8 @@ void Render(float alpha, float elapsedtime)
 
 	D3DXVECTOR4		uvscale(3, 3, 0, 0);
 	D3DXVECTOR4		volumecolor(0, 0, 0, 1);
-	D3DXVECTOR4		ambientcolor(0.2f, 0.2f, 0.2f, 1);
-	D3DXVECTOR4		lightcolor(0.8f, 0.8f, 0.8f, 1);
+	D3DXVECTOR4		ambientcolor(0.03f, 0.03f, 0.03f, 1);
+	D3DXVECTOR4		lightcolor(0.61f, 0.61f, 0.61f, 1);
 
 	D3DXVECTOR3		lightpos(0, 0, -10);
 	D3DXVECTOR3		eye(0, 0, -5.2f);
@@ -414,7 +414,7 @@ void Render(float alpha, float elapsedtime)
 	D3DXMatrixScaling(&world, 5, 0.1f, 5);
 	D3DXMatrixInverse(&inv, 0, &world);
 
-	float color[4] = { 0.0f, 0.125f, 0.3f, 1.0f };
+	float color[4] = { 0.0f, 0.01f, 0.07f, 1.0f };
 
 	device->ClearRenderTargetView(rendertargetview, color);
 	device->ClearDepthStencilView(depthstencilview, D3D10_CLEAR_DEPTH|D3D10_CLEAR_STENCIL, 1.0f, 0);

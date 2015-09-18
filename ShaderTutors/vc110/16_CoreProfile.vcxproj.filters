@@ -5,10 +5,13 @@
     <ClCompile Include="..\extern\qglextensions.cpp">
       <Filter>extern</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\glext.cpp">
+    <ClCompile Include="..\common\gl4x.cpp">
       <Filter>common</Filter>
     </ClCompile>
     <ClCompile Include="..\common\othergl.cpp" />
+    <ClCompile Include="..\common\dds.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="extern">
@@ -31,11 +34,14 @@
     <ClInclude Include="..\extern\qglextensions.h">
       <Filter>extern</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\glext.h">
+    <ClInclude Include="..\common\gl4x.h">
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\extern\glext.h">
       <Filter>extern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\dds.h">
+      <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

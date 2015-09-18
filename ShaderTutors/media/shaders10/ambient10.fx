@@ -27,7 +27,10 @@ void ps_ambient(
 	in	float2 tex		: TEXCOORD0,
 	out	float4 color	: SV_Target)
 {
-	color = basetex.Sample(linearSampler, tex) * lightAmbient;
+	float4 base = basetex.Sample(linearSampler, tex);
+
+	color.rgb = pow(base.rgb, 2.2f) * lightAmbient.rgb;
+	color.a = base.a;
 }
 
 technique10 ambient

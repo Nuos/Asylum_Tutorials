@@ -105,7 +105,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\13_StencilShadow10\main.cpp" />
-    <ClCompile Include="..\13_StencilShadow10\other.cpp" />
+    <ClCompile Include="..\common\other10.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\media\shaders10\blinnphong10.fx">

@@ -25,19 +25,27 @@ RECT		workarea;
 DEVMODE		devmode;
 long		screenwidth		= 800;
 long		screenheight	= 600;
-short		mousex, mousedx	= 0;
-short		mousey, mousedy	= 0;
-short		mousedown		= 0;
 bool		uninited		= false;
 
-// must be implemented by sample
-bool InitScene();
+struct InputState
+{
+	unsigned char Button;
+	short X, Y;
+	int dX, dY;
+} inputstate;
 
-void UninitScene();
-void Update(float delta);
-void Render(float alpha, float elapsedtime);
-void KeyPress(WPARAM wparam);
-void MouseMove();
+// must be implemented by sample
+extern bool InitScene();
+
+extern void UninitScene();
+extern void Update(float delta);
+extern void Render(float alpha, float elapsedtime);
+
+extern void Event_KeyDown(unsigned char keycode);
+extern void Event_KeyUp(unsigned char keycode);
+extern void Event_MouseMove(int x, int y, short dx, short dy);
+extern void Event_MouseDown(int x, int y, unsigned char button);
+extern void Event_MouseUp(int x, int y, unsigned char button);
 
 namespace Quadron
 {
@@ -331,6 +339,10 @@ LRESULT WINAPI WndProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam
 		PostQuitMessage(0);
 		return 0;
 	
+	case WM_KEYDOWN:
+		Event_KeyDown((unsigned char)wParam);
+		break;
+
 	case WM_KEYUP:
 		switch(wParam)
 		{
@@ -339,7 +351,7 @@ LRESULT WINAPI WndProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam
 			break;
 
 		default:
-			KeyPress(wParam);
+			Event_KeyUp((unsigned char)wParam);
 			break;
 		}
 		break;
@@ -348,29 +360,33 @@ LRESULT WINAPI WndProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam
 		short x = (short)(lParam & 0xffff);
 		short y = (short)((lParam >> 16) & 0xffff);
 
-		mousedx += x - mousex;
-		mousedy += y - mousey;
+		inputstate.dX = x - inputstate.X;
+		inputstate.dY = y - inputstate.Y;
 
-		mousex = x;
-		mousey = y;
+		inputstate.X = x;
+		inputstate.Y = y;
 
-		MouseMove();
+		Event_MouseMove(inputstate.X, inputstate.Y, inputstate.dX, inputstate.dY);
 		} break;
 
 	case WM_LBUTTONDOWN:
-		mousedown = 1;
-		MouseMove();
+		inputstate.Button |= 1;
+		Event_MouseDown(inputstate.X, inputstate.Y, 1);
 		break;
 
 	case WM_RBUTTONDOWN:
-		mousedown = 2;
-		MouseMove();
+		inputstate.Button |= 2;
+		Event_MouseDown(inputstate.X, inputstate.Y, 2);
 		break;
 
 	case WM_LBUTTONUP:
+		Event_MouseUp(inputstate.X, inputstate.Y, inputstate.Button & 1);
+		inputstate.Button &= (~1);
+		break;
+
 	case WM_RBUTTONUP:
-		mousedown = 0;
-		MouseMove();
+		Event_MouseUp(inputstate.X, inputstate.Y, inputstate.Button & 2);
+		inputstate.Button &= (~2);
 		break;
 
 	default:
@@ -456,6 +472,10 @@ int main(int argc, char* argv[])
 	QueryPerformanceCounter(&qwTime);
 	last = (qwTime.QuadPart % tickspersec) / (double)tickspersec;
 
+	inputstate.Button = 0;
+	inputstate.X = inputstate.Y = 0;
+	inputstate.dX = inputstate.dY = 0;
+
 	while( msg.message != WM_QUIT )
 	{
 		QueryPerformanceCounter(&qwTime);
@@ -470,8 +490,6 @@ int main(int argc, char* argv[])
 		last = current;
 		accum += delta;
 
-		mousedx = mousedy = 0;
-
 		while( accum > 0.1f )
 		{
 			accum -= 0.1f;
@@ -482,10 +500,11 @@ int main(int argc, char* argv[])
 				DispatchMessage(&msg);
 			}
 
-			Update(0.1f);
+			if( !uninited )
+				Update(0.1f);
 		}
 
-		if( msg.message != WM_QUIT )
+		if( !uninited )
 			Render((float)accum / 0.1f, (float)delta);
 	}
 
@@ -497,7 +516,7 @@ _end:
 	_CrtDumpMemoryLeaks();
 
 #ifdef _DEBUG
-	//system("pause");
+	system("pause");
 #endif
 
 	return 0;

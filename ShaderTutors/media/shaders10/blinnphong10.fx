@@ -50,12 +50,13 @@ void ps_specular(
 
 	float diffuse = saturate(dot(n, l));
 	float specular = saturate(dot(n, h));
+	float4 base = basetex.Sample(linearSampler, tex);
 
 	specular = pow(specular, 60);
-	color = basetex.Sample(linearSampler, tex) * diffuse + specular;
+	color.rgb = pow(base.rgb, 2.2f) * diffuse + specular;
 
-	color *= lightColor;
-	color.a = 1;
+	color.rgb *= lightColor.rgb;
+	color.a = base.a;
 }
 
 technique10 specular

@@ -366,10 +366,7 @@ private:
 
 		if( effect && screenquad )
 		{
-			float texmat[16];
 			GLuint texid = item->GetBottomLayer().GetRenderTarget()->GetColorAttachment(0);
-
-			GLMatrixIdentity(texmat);
 
 			glBindTexture(GL_TEXTURE_2D, texid);
 
@@ -377,7 +374,6 @@ private:
 			context->Clear(GL_COLOR_BUFFER_BIT, OpenGLColor(0, 0, 0, 1));
 
 			effect->SetInt("sampler0", 0);
-			effect->SetMatrix("matTexture", texmat);
 			effect->Begin();
 			{
 				screenquad->Draw();

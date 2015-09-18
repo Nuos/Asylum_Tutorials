@@ -4,7 +4,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "../common/glext.h"
+#include "../common/gl4x.h"
 
 // TODO:
 // - MSAA
@@ -22,9 +22,6 @@ extern HWND		hwnd;
 extern HDC		hdc;
 extern long		screenwidth;
 extern long		screenheight;
-extern short	mousex, mousedx;
-extern short	mousey, mousedy;
-extern short	mousedown;
 
 // sample structures
 struct SurfaceVertex
@@ -112,6 +109,12 @@ float				selectiondx, selectiondy;
 bool				wireframe				= false;
 bool				fullscreen				= false;
 
+int					mousex			= 0;
+int					mousey			= 0;
+short				mousedx			= 0;
+short				mousedy			= 0;
+short				mousedown		= 0;
+
 array_state<float, 2> cameraangle;
 
 // sample functions
@@ -173,6 +176,10 @@ static void APIENTRY ReportGLError(GLenum source, GLenum type, GLuint id, GLenum
 
 bool InitScene()
 {
+	// TOOD: fix
+	screenwidth = 800;
+	screenheight = 600;
+
 	SurfaceVertex*	svdata = 0;
 	float			(*vdata)[4] = 0;
 	GLushort*		idata = 0;
@@ -304,13 +311,13 @@ bool InitScene()
 		return false;
 	}
 
-	if( !GLCreateComputeProgramFromFile("../media/shadersGL/tessellatecurve.comp", 0, &tessellatecurve) )
+	if( !GLCreateComputeProgramFromFile("../media/shadersGL/tessellatecurve.comp", &tessellatecurve) )
 	{
 		MYERROR("Could not load compute shader");
 		return false;
 	}
 
-	if( !GLCreateComputeProgramFromFile("../media/shadersGL/tessellatesurface.comp", 0, &tessellatesurface) )
+	if( !GLCreateComputeProgramFromFile("../media/shadersGL/tessellatesurface.comp", &tessellatesurface) )
 	{
 		MYERROR("Could not load compute shader");
 		return false;
@@ -516,20 +523,24 @@ void Tessellate()
 	delete[] surfacecvs;
 }
 //*************************************************************************************************************
-void KeyPress(WPARAM wparam)
+void Event_KeyDown(unsigned char keycode)
+{
+}
+//*************************************************************************************************************
+void Event_KeyUp(unsigned char keycode)
 {
 	int numcurves = sizeof(curves) / sizeof(curves[0]);
 
 	for( int i = 0; i < numcurves; ++i )
 	{
-		if( wparam == 0x31 + i )
+		if( keycode == 0x31 + i )
 		{
 			ChangeCurve(i);
 			Tessellate();
 		}
 	}
 
-	switch( wparam )
+	switch( keycode )
 	{
 	case 0x46:
 		fullscreen = !fullscreen;
@@ -557,8 +568,14 @@ void KeyPress(WPARAM wparam)
 	}
 }
 //*************************************************************************************************************
-void MouseMove()
+void Event_MouseMove(int x, int y, short dx, short dy)
 {
+	mousex = x;
+	mousey = y;
+
+	mousedx += dx;
+	mousedy += dy;
+
 	if( mousedown == 1 )
 	{
 		if( !fullscreen )
@@ -569,6 +586,16 @@ void MouseMove()
 	}
 	else
 		selectedcontrolpoint = -1;
+}
+//*************************************************************************************************************
+void Event_MouseDown(int x, int y, unsigned char button)
+{
+	mousedown = 1;
+}
+//*************************************************************************************************************
+void Event_MouseUp(int x, int y, unsigned char button)
+{
+	mousedown = 0;
 }
 //*************************************************************************************************************
 void Update(float delta)
@@ -756,5 +783,6 @@ void Render(float alpha, float elapsedtime)
 #endif
 
 	SwapBuffers(hdc);
+	mousedx = mousedy = 0;
 }
 //*************************************************************************************************************

@@ -3,7 +3,7 @@
 #include <GdiPlus.h>
 #include <iostream>
 
-#include "../common/glext.h"
+#include "../common/gl4x.h"
 
 // helper macros
 #define TITLE				"Shader sample 22.0: Hello compute!"
@@ -71,7 +71,7 @@ bool InitScene()
 	}
 
 	// compute shader
-	if( !(ok = GLCreateComputeProgramFromFile("../media/shadersGL/coloredtexture.comp", 0, &coloredtexture)) )
+	if( !(ok = GLCreateComputeProgramFromFile("../media/shadersGL/coloredtexture.comp", &coloredtexture)) )
 	{
 		MYERROR("Could not load compute shader");
 		return false;
@@ -102,11 +102,23 @@ void UninitScene()
 	texture = 0;
 }
 //*************************************************************************************************************
-void KeyPress(WPARAM wparam)
+void Event_KeyDown(unsigned char keycode)
 {
 }
 //*************************************************************************************************************
-void MouseMove()
+void Event_KeyUp(unsigned char keycode)
+{
+}
+//*************************************************************************************************************
+void Event_MouseMove(int x, int y, short dx, short dy)
+{
+}
+//*************************************************************************************************************
+void Event_MouseDown(int x, int y, unsigned char button)
+{
+}
+//*************************************************************************************************************
+void Event_MouseUp(int x, int y, unsigned char button)
 {
 }
 //*************************************************************************************************************
