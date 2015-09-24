@@ -304,7 +304,7 @@ bool InitScene()
 		MYERROR("Could not load ambient shader");
 		return false;
 	}
-	
+
 	if( hascompute )
 	{
 		// light accumulation shader
@@ -320,7 +320,21 @@ bool InitScene()
 			MYERROR("Could not load light culling shader");
 			return false;
 		}
+
+		lightcull->SetInt("depthSampler", 0);
+		lightcull->SetInt("numLights", NUM_LIGHTS);
+		lightaccum->SetInt("sampler0", 0);
 	}
+
+	float white[] = { 1, 1, 1, 1 };
+	
+	shadowedlight->SetVector("matSpecular", white);
+	shadowedlight->SetInt("sampler0", 0);
+	shadowedlight->SetInt("sampler1", 1);
+
+	boxblur3x3->SetInt("sampler0", 0);
+	basic2D->SetInt("sampler0", 0);
+	gammacorrect->SetInt("sampler0", 0);
 
 	float angles[2] = { -0.25f, 0.7f };
 	cameraangle = angles;
@@ -712,8 +726,7 @@ void Render(float alpha, float elapsedtime)
 	glDepthMask(GL_FALSE);
 	glBindTexture(GL_TEXTURE_2D, shadowmap->GetColorAttachment(0));
 
-	boxblur3x3->SetMatrix("texelSize", texelsize);
-	boxblur3x3->SetInt("sampler0", 0);
+	boxblur3x3->SetVector("texelSize", texelsize);
 
 	blurredshadow->Set();
 	{
@@ -753,7 +766,6 @@ void Render(float alpha, float elapsedtime)
 		GLMatrixRotationAxis(tmp, M_PI, 0, 0, 1);
 		GLMatrixMultiply(texmat, texmat, tmp);
 
-		basic2D->SetInt("sampler0", 0);
 		basic2D->SetMatrix("matTexture", texmat);
 		basic2D->Begin();
 		{
@@ -776,8 +788,6 @@ void Render(float alpha, float elapsedtime)
 	// STEP 2: cull lights
 	if( lightcull && timeout > DELAY )
 	{
-		lightcull->SetInt("depthSampler", 0);
-		lightcull->SetInt("numLights", NUM_LIGHTS);
 		lightcull->SetFloat("alpha", alpha);
 		lightcull->SetVector("clipPlanes", clipplanes);
 		lightcull->SetVector("screenSize", screensize);
@@ -821,8 +831,6 @@ void Render(float alpha, float elapsedtime)
 	shadowedlight->SetVector("lightPos", moonlight);
 	shadowedlight->SetVector("lightColor", mooncolor);
 	shadowedlight->SetVector("clipPlanes", lightclip);
-	shadowedlight->SetInt("sampler0", 0);
-	shadowedlight->SetInt("sampler1", 1);
 
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, blurredshadow->GetColorAttachment(0));
@@ -840,7 +848,6 @@ void Render(float alpha, float elapsedtime)
 		lightaccum->SetMatrix("matViewProj", viewproj);
 		lightaccum->SetVector("eyePos", eye);
 		lightaccum->SetFloat("alpha", alpha);
-		lightaccum->SetInt("sampler0", 0);
 		lightaccum->SetInt("numTilesX", workgroupsx);
 
 		lightaccum->Begin();
@@ -863,7 +870,6 @@ void Render(float alpha, float elapsedtime)
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	glBindTexture(GL_TEXTURE_2D, framebuffer->GetColorAttachment(0));
 
-	gammacorrect->SetInt("sampler0", 0);
 	gammacorrect->Begin();
 	{
 		screenquad->Draw();

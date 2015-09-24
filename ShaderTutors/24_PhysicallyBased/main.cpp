@@ -1687,7 +1687,7 @@ void RenderShadowmap()
 	}
 	blockers->Unset();
 
-	boxblur3x3->SetMatrix("texelSize", texelsize);
+	boxblur3x3->SetVector("texelSize", texelsize);
 	GLSetTexture(GL_TEXTURE0, GL_TEXTURE_2D, blockers->GetColorAttachment(0));
 
 	light.GetShadowMap()->Set();
@@ -1999,7 +1999,6 @@ void RenderSky(float eye[3], float view[16], float proj[16])
 	skyeffect->SetVector("eyePos", eye);
 	skyeffect->SetMatrix("matWorld", world);
 	skyeffect->SetMatrix("matViewProj", tmp);
-	skyeffect->SetFloat("gamma", 1.0f); // RGBA16F is linear
 
 	skyeffect->Begin();
 	{

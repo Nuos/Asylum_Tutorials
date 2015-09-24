@@ -1,10 +1,12 @@
-#version 430
+#version 150
 
 uniform sampler2D sampler0;
 uniform sampler2D sampler1;		// shadowmap
 
 uniform vec4 lightColor;
+uniform vec4 matSpecular;
 uniform vec2 clipPlanes;
+uniform float ambient;
 
 in vec4 ltov;
 in vec3 wnorm;
@@ -46,6 +48,11 @@ void main()
 	vec4 base = texture(sampler0, tex);
 	float s = VarianceShadow(ltov);
 
-	my_FragColor0.rgb = s * lightColor.rgb * (base.rgb * diff + vec3(spec));
+	s = clamp(s + ambient, 0.0, 1.0);
+
+	vec3 fd = base.rgb * diff * s;
+	vec3 fs = matSpecular.rgb * spec * s;
+
+	my_FragColor0.rgb = lightColor.rgb * (fd + fs);
 	my_FragColor0.a = 1.0;
 }

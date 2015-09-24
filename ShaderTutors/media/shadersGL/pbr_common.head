@@ -20,7 +20,7 @@ float D_GGX(float ndoth, float roughness)
 	float m2 = m * m;
 	float d = (ndoth * m2 - ndoth) * ndoth + 1.0;
 
-	return m2 / (PI * d * d);
+	return m2 / max(PI * d * d, 1e-8);
 }
 
 float Vis_Schlick(float ndotl, float ndotv, float roughness)

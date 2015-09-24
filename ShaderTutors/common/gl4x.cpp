@@ -2621,6 +2621,94 @@ bool GLCreateCubeTextureFromFile(const char* file, GLuint* out)
 	return (texid != 0);
 }
 
+bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out)
+{
+	std::wstring wstr;
+	int length, size;
+	GLuint texid = 0;
+
+	glGenTextures(1, &texid);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texid);
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	for( int k = 0; k < 6; ++k )
+	{
+		length = strlen(files[k]);
+		size = MultiByteToWideChar(CP_UTF8, 0, files[k], length, 0, 0);
+
+		wstr.resize(size);
+		MultiByteToWideChar(CP_UTF8, 0, files[k], length, &wstr[0], size);
+
+		Gdiplus::Bitmap* bitmap = Win32LoadPicture(wstr);
+
+		if( bitmap )
+		{ 
+			if( bitmap->GetLastStatus() == Gdiplus::Ok )
+			{
+				Gdiplus::BitmapData data;
+				unsigned char* tmpbuff;
+
+				bitmap->LockBits(0, Gdiplus::ImageLockModeRead, PixelFormat32bppARGB, &data);
+
+				tmpbuff = new unsigned char[data.Width * data.Height * 4];
+				memcpy(tmpbuff, data.Scan0, data.Width * data.Height * 4);
+
+				for( UINT i = 0; i < data.Height; ++i )
+				{
+					// swap red and blue
+					for( UINT j = 0; j < data.Width; ++j )
+					{
+						UINT index = (i * data.Width + j) * 4;
+						std::swap<unsigned char>(tmpbuff[index + 0], tmpbuff[index + 2]);
+					}
+
+					// flip on X
+					for( UINT j = 0; j < data.Width / 2; ++j )
+					{
+						UINT index1 = (i * data.Width + j) * 4;
+						UINT index2 = (i * data.Width + (data.Width - j - 1)) * 4;
+
+						std::swap<unsigned int>(*((unsigned int*)(tmpbuff + index1)), *((unsigned int*)(tmpbuff + index2)));
+					}
+				}
+
+				if( srgb )
+					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + k, 0, GL_SRGB8_ALPHA8, data.Width, data.Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmpbuff);
+				else
+					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + k, 0, GL_RGBA, data.Width, data.Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmpbuff);
+			
+				bitmap->UnlockBits(&data);
+				delete[] tmpbuff;
+			}
+
+			delete bitmap;
+		}
+		else
+			std::cout << "Error: Could not load bitmap!";
+	}
+
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+	GLenum err = glGetError();
+
+	if( err != GL_NO_ERROR )
+	{
+		glDeleteTextures(1, &texid);
+		texid = 0;
+
+		std::cout << "Error: Could not create cube texture!";
+	}
+	else
+		std::cout << "Created cube texture\n";
+
+	*out = texid;
+	return (texid != 0);
+}
+
 bool GLSaveFP16CubemapToFile(const char* filename, GLuint texture)
 {
 	DDS_Image_Info	info;

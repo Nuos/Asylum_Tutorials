@@ -392,6 +392,7 @@ public:
 bool GLCreateTexture(GLsizei width, GLsizei height, GLint miplevels, OpenGLFormat format, GLuint* out);
 bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out);
 bool GLCreateCubeTextureFromFile(const char* file, GLuint* out);
+bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out);
 bool GLCreateMesh(GLuint numvertices, GLuint numindices, GLuint options, OpenGLVertexElement* decl, OpenGLMesh** mesh);
 bool GLCreateMeshFromQM(const char* file, OpenGLMaterial** materials, GLuint* nummaterials, OpenGLMesh** mesh);
 bool GLCreatePlane(float width, float height, float uscale, float vscale, OpenGLMesh** mesh);

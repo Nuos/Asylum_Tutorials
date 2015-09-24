@@ -171,7 +171,7 @@ void main()
 
 	vec3 h = normalize(v + l);
 
-	float ndotv = abs(dot(n, v)) + 1e-5;
+	float ndotv = clamp(dot(n, v), 0.0, 1.0);
 	float ndotl = clamp(dot(n, l), 0.0, 1.0);
 	float ndoth = clamp(dot(n, h), 0.0, 1.0);
 	float ldoth = clamp(dot(l, h), 0.0, 1.0);

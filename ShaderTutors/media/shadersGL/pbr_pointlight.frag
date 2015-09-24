@@ -24,7 +24,7 @@ void main()
 
 	float ndotv = clamp(dot(n, v), 0.0, 1.0);
 	float ndotl = clamp(dot(n, l), 0.0, 1.0);
-	float ndoth = clamp(dot(n, h), 0.0, 0.999); // NOTE: 1 causes inf sometimes
+	float ndoth = clamp(dot(n, h), 0.0, 1.0);
 	float ldoth = clamp(dot(l, h), 0.0, 1.0);
 
 	vec4 fd = BRDF_Lambertian(tex);

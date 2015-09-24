@@ -55,6 +55,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "24_PrefilterEnvMap10", "vc1
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "24_SimplePathTracer10", "vc100\24_SimplePathTracer10.vcxproj", "{13A9BA63-5D69-419B-82AB-F27839873BFC}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "19_ShadowMapGL", "vc100\19_ShadowMapGL.vcxproj", "{422E507F-0856-40E0-86D9-D8ED91A97F19}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -169,6 +171,10 @@ Global
 		{13A9BA63-5D69-419B-82AB-F27839873BFC}.Debug|Win32.Build.0 = Debug|Win32
 		{13A9BA63-5D69-419B-82AB-F27839873BFC}.Release|Win32.ActiveCfg = Release|Win32
 		{13A9BA63-5D69-419B-82AB-F27839873BFC}.Release|Win32.Build.0 = Release|Win32
+		{422E507F-0856-40E0-86D9-D8ED91A97F19}.Debug|Win32.ActiveCfg = Debug|Win32
+		{422E507F-0856-40E0-86D9-D8ED91A97F19}.Debug|Win32.Build.0 = Debug|Win32
+		{422E507F-0856-40E0-86D9-D8ED91A97F19}.Release|Win32.ActiveCfg = Release|Win32
+		{422E507F-0856-40E0-86D9-D8ED91A97F19}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
