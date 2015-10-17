@@ -12,12 +12,14 @@ void ps_blur(
 	in	float2 tex		: TEXCOORD0,
 	out	float4 color0	: COLOR0)
 {
-	color0 = tex2D(sampler0, tex) * 0.2f;
+	color0 = 0;
 
-	color0 += tex2D(sampler0, tex + texelSize * float2(-2, -2)) * 0.2f;
-	color0 += tex2D(sampler0, tex + texelSize * float2(-1, -1)) * 0.2f;
-	color0 += tex2D(sampler0, tex + texelSize * float2(1, 1)) * 0.2f;
-	color0 += tex2D(sampler0, tex + texelSize * float2(2, 2)) * 0.2f;
+	[unroll]
+	for( int i = -2; i < 3; ++i )
+		for( int j = -2; j < 3; ++j )
+			color0 += tex2D(sampler0, tex + texelSize * float2(i, j));
+
+	color0 *= 0.04f;
 }
 
 technique blur

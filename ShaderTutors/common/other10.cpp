@@ -34,8 +34,8 @@ IDXGISwapChain*			swapchain			= NULL;;
 HWND					hwnd				= NULL;
 ULONG_PTR				gdiplustoken		= 0;
 RECT					workarea;
-long					screenwidth			= 800;
-long					screenheight		= 600;
+long					screenwidth			= 1024;
+long					screenheight		= 576;
 
 short					mousex, mousedx		= 0;
 short					mousey, mousedy		= 0;
@@ -584,15 +584,45 @@ void Adjust(tagRECT& out, long& width, long& height, DWORD style, DWORD exstyle,
 	height = windowheight - dh;
 }
 //*************************************************************************************************************
+void ReadResolutionFile()
+{
+	FILE* fp = 0;
+	
+	fopen_s(&fp, "res.conf", "rb");
+
+	if( fp )
+	{
+		fscanf_s(fp, "%ld %ld\n", &screenwidth, &screenheight);
+		fclose(fp);
+
+		if( screenwidth < 640 )
+			screenwidth = 640;
+
+		if( screenheight < 480 )
+			screenheight = 480;
+	}
+	else
+	{
+		fopen_s(&fp, "res.conf", "wb");
+
+		if( fp )
+		{
+			fprintf(fp, "%ld %ld\n", screenwidth, screenheight);
+			fclose(fp);
+		}
+	}
+}
+//*************************************************************************************************************
 int main(int argc, char* argv[])
 {
+	ReadResolutionFile();
+
 	LARGE_INTEGER qwTicksPerSec = { 0, 0 };
 	LARGE_INTEGER qwTime;
 	LONGLONG tickspersec;
 	double last, current;
 	double delta, accum = 0;
 
-	// ablak osztály
 	WNDCLASSEX wc =
 	{
 		sizeof(WNDCLASSEX),
@@ -610,7 +640,6 @@ int main(int argc, char* argv[])
 	RECT rect = { 0, 0, screenwidth, screenheight };
 	DWORD style = WS_CLIPCHILDREN|WS_CLIPSIBLINGS;
 
-	// ablakos mód
 	style |= WS_SYSMENU|WS_BORDER|WS_CAPTION;
 	Adjust(rect, screenwidth, screenheight, style, 0);
 

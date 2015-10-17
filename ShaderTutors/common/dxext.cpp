@@ -235,10 +235,11 @@ float DXAABox::Farthest(const D3DXPLANE& from) const
 
 DXObject::DXObject(IDirect3DDevice9* d3ddevice)
 {
-	device = d3ddevice;
-	mesh = NULL;
-	textures = NULL;
-	materials = NULL;
+	device			= d3ddevice;
+	mesh			= NULL;
+	textures		= NULL;
+	materials		= NULL;
+	nummaterials	= 0;
 }
 
 DXObject::~DXObject()
@@ -276,6 +277,66 @@ void DXObject::Clean()
 	mesh = NULL;
 	textures = NULL;
 	materials = NULL;
+}
+
+bool DXObject::CreatePlane(float width, float height, float utile, float vtile)
+{
+	D3DVERTEXELEMENT9 declaration[] = 
+	{
+		{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0 },
+		{ 0, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL,   0 },
+		{ 0, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0 },
+		D3DDECL_END()
+	};
+
+	float whalf = width / 2;
+	float hhalf = height / 2;
+
+	float vertices[32] =
+	{
+		-whalf,	0,	hhalf,	0, 1, 0,	0, 0,
+		whalf,	0,	hhalf,	0, 1, 0,	utile, 0,
+		whalf,	0,	-hhalf,	0, 1, 0,	utile, vtile,
+		-whalf,	0,	-hhalf,	0, 1, 0,	0, vtile
+	};
+
+	unsigned short indices[6] =
+	{
+		0, 1, 2,
+		0, 2, 3
+	};
+
+	HRESULT hr = D3DXCreateMesh(2, 4, D3DXMESH_MANAGED, declaration, device, &mesh);
+
+	if( FAILED(hr) )
+		return false;
+
+	void* vdata = NULL;
+	void* idata = NULL;
+
+	hr = mesh->LockVertexBuffer(0, &vdata);
+	memcpy(vdata, vertices, sizeof(float) * 32);
+	mesh->UnlockVertexBuffer();
+
+	hr = mesh->LockIndexBuffer(0, &idata);
+	memcpy(idata, indices, sizeof(unsigned short) * 6);
+	mesh->UnlockIndexBuffer();
+
+	if( FAILED(hr) )
+	{
+		delete mesh;
+		mesh = 0;
+
+		return false;
+	}
+
+	nummaterials = 1;
+	materials = new D3DXMATERIAL[1];
+
+	memset(materials, 0, sizeof(D3DXMATERIAL));
+	materials->MatD3D.Diffuse.a = 1;
+
+	return true;
 }
 
 bool DXObject::GenerateTangentFrame()
@@ -344,8 +405,8 @@ bool DXObject::Load(const std::string& file)
 
 				hr = D3DXCreateTextureFromFileA(device, (path + matname).c_str(), &textures[i]);
 
-				if( FAILED(hr) )
-					return false;
+				//if( FAILED(hr) )
+				//	return false;
 			}
 		}
 	}

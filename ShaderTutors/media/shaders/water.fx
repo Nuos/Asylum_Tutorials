@@ -1,14 +1,21 @@
 
-sampler mytex0 : register(s0) = sampler_state
+sampler refractionmap : register(s0) = sampler_state
 {
 	MinFilter = linear;
 	MagFilter = linear;
 };
 
-sampler mytex1 : register(s1) = sampler_state
+sampler reflectionmap : register(s1) = sampler_state
 {
 	MinFilter = linear;
 	MagFilter = linear;
+};
+
+sampler normalmap : register(s2) = sampler_state
+{
+	MinFilter = linear;
+	MagFilter = linear;
+	MipFilter = linear;
 };
 
 matrix matWorld;
@@ -17,6 +24,7 @@ matrix matViewProj;
 
 float time = 0;
 float4 lightPos = { -10, 10, -10, 1 };
+float4 lightColor = { 1, 1, 1, 1 };
 float4 eyePos;
 
 static const float2 wavedir1 = { -0.02, 0 };
@@ -66,29 +74,47 @@ void ps_main(
 	in	float4 tproj	: TEXCOORD3,
 	out	float4 color	: COLOR0)
 {
-	float2 t = tex * 0.4f;
+	float2 t1 = tex * 0.4f; // hack
+	float2 t2;
 
 	float3 l = normalize(ldirts);
 	float3 v = normalize(vdirts);
 	float3 h = normalize(l + v);
 	float3 n = 0;
 
-	n += (tex2D(mytex1, t + time * wavedir1) * 2 - 1) * 0.3f;
-	n += (tex2D(mytex1, t + time * wavedir2) * 2 - 1) * 0.3f;
-	n += (tex2D(mytex1, t + time * wavedir3) * 2 - 1) * 0.4f;
+	n += (tex2D(normalmap, t1 + time * wavedir1) * 2 - 1) * 0.3f;
+	n += (tex2D(normalmap, t1 + time * wavedir2) * 2 - 1) * 0.3f;
+	n += (tex2D(normalmap, t1 + time * wavedir3) * 2 - 1) * 0.4f;
 
 	n = normalize(n);
-	t = tproj.xy / tproj.w;
+	t1 = tproj.xy / tproj.w;
+	t2 = float2(t1.x, 1 - t1.y);
 
-	float4 base = tex2D(mytex0, t + n.xy * 0.02f);
+	float4 refr = tex2D(refractionmap, t2 + n.xy * 0.02f);
+	float4 refl = tex2D(reflectionmap, t1 + n.xy * 0.02f);
+
+#ifndef DISABLE_MASK
+	// don't add refraction from objects infront
+	float4 mask = tex2D(refractionmap, t2);
+	refr = lerp(refr, mask, refr.w);
+#endif
+
+	// Schlick
+	const float n1 = 1.000293f;
+	const float n2 = 1.333f;
+
+	float F0 = (n1 - n2) / (n1 + n2);
+
+	F0 *= F0;
+	float F = saturate(F0 + (1 - F0) * pow(1 - dot(v, n), 5));
+
 	float diffuse = saturate(dot(n, l));
 	float specular = saturate(dot(n, h));
 
-	diffuse = diffuse * 0.6f + 0.4f;
-	specular = pow(specular, 120);
+	diffuse = diffuse * 0.6f + 0.4f; // hack
+	specular = pow(specular, 80);
 
-	color = base * diffuse + specular;
-	color.a = 1;
+	color = saturate(lerp(refr * diffuse, refl, F) + specular * lightColor);
 }
 
 technique water

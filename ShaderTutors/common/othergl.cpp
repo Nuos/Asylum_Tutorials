@@ -1,4 +1,4 @@
-//*************************************************************************************************************
+
 #pragma comment(lib, "OpenGL32.lib")
 #pragma comment(lib, "GLU32.lib")
 #pragma comment(lib, "winmm.lib")
@@ -22,9 +22,8 @@ HDC			hdc				= NULL;
 HGLRC		hrc				= NULL;
 
 RECT		workarea;
-DEVMODE		devmode;
-long		screenwidth		= 800;
-long		screenheight	= 600;
+long		screenwidth		= 1024;
+long		screenheight	= 576;
 bool		uninited		= false;
 
 struct InputState
@@ -248,7 +247,7 @@ bool InitGL(HWND hwnd)
 
 	return true;
 }
-//*************************************************************************************************************
+
 void UninitGL()
 {
 	if( !uninited )
@@ -276,7 +275,7 @@ void UninitGL()
 		DestroyWindow(hwnd);
 	}
 }
-//*************************************************************************************************************
+
 void Adjust(tagRECT& out, long& width, long& height, DWORD style, DWORD exstyle, bool menu = false)
 {
 	long w = workarea.right - workarea.left;
@@ -321,7 +320,7 @@ void Adjust(tagRECT& out, long& width, long& height, DWORD style, DWORD exstyle,
 	width = windowwidth - dw;
 	height = windowheight - dh;
 }
-//*************************************************************************************************************
+
 LRESULT WINAPI WndProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam)
 {
 	if( hWnd != hwnd )
@@ -395,9 +394,40 @@ LRESULT WINAPI WndProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam
 
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
-//*************************************************************************************************************
+
+void ReadResolutionFile()
+{
+	FILE* fp = 0;
+	
+	fopen_s(&fp, "res.conf", "rb");
+
+	if( fp )
+	{
+		fscanf_s(fp, "%ld %ld\n", &screenwidth, &screenheight);
+		fclose(fp);
+
+		if( screenwidth < 640 )
+			screenwidth = 640;
+
+		if( screenheight < 480 )
+			screenheight = 480;
+	}
+	else
+	{
+		fopen_s(&fp, "res.conf", "wb");
+
+		if( fp )
+		{
+			fprintf(fp, "%ld %ld\n", screenwidth, screenheight);
+			fclose(fp);
+		}
+	}
+}
+
 int main(int argc, char* argv[])
 {
+	ReadResolutionFile();
+
 	LARGE_INTEGER qwTicksPerSec = { 0, 0 };
 	LARGE_INTEGER qwTime;
 	LONGLONG tickspersec;
@@ -422,14 +452,6 @@ int main(int argc, char* argv[])
 	
 	RECT rect = { 0, 0, screenwidth, screenheight };
 	DWORD style = WS_CLIPCHILDREN|WS_CLIPSIBLINGS;
-
-	memset(&devmode, 0, sizeof(DEVMODE));
-
-	devmode.dmSize			= sizeof(DEVMODE);
-	devmode.dmBitsPerPel	= 32;
-	devmode.dmPelsWidth		= screenwidth;
-	devmode.dmPelsHeight	= screenheight;
-	devmode.dmFields		= DM_BITSPERPEL|DM_PELSWIDTH|DM_PELSHEIGHT;
 
 	style |= WS_SYSMENU|WS_BORDER|WS_CAPTION|WS_MINIMIZEBOX;
 	Adjust(rect, screenwidth, screenheight, style, true);
@@ -462,10 +484,6 @@ int main(int argc, char* argv[])
 	MSG msg;
 	ZeroMemory(&msg, sizeof(msg));
 
-	POINT p;
-	GetCursorPos(&p);
-	ScreenToClient(hwnd, &p);
-	
 	QueryPerformanceFrequency(&qwTicksPerSec);
 	tickspersec = qwTicksPerSec.QuadPart;
 
@@ -521,4 +539,3 @@ _end:
 
 	return 0;
 }
-//*************************************************************************************************************

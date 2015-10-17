@@ -21,8 +21,8 @@ LPDIRECT3DDEVICE9		device			= NULL;
 
 D3DPRESENT_PARAMETERS	d3dpp;
 RECT					workarea;
-long					screenwidth		= 800;
-long					screenheight	= 600;
+long					screenwidth		= 1024;
+long					screenheight	= 576;
 short					mousex, mousedx	= 0;
 short					mousey, mousedy	= 0;
 short					mousedown		= 0;
@@ -166,8 +166,39 @@ void Adjust(tagRECT& out, long& width, long& height, DWORD style, DWORD exstyle,
 	height = windowheight - dh;
 }
 //*************************************************************************************************************
+void ReadResolutionFile()
+{
+	FILE* fp = 0;
+	
+	fopen_s(&fp, "res.conf", "rb");
+
+	if( fp )
+	{
+		fscanf_s(fp, "%ld %ld\n", &screenwidth, &screenheight);
+		fclose(fp);
+
+		if( screenwidth < 640 )
+			screenwidth = 640;
+
+		if( screenheight < 480 )
+			screenheight = 480;
+	}
+	else
+	{
+		fopen_s(&fp, "res.conf", "wb");
+
+		if( fp )
+		{
+			fprintf(fp, "%ld %ld\n", screenwidth, screenheight);
+			fclose(fp);
+		}
+	}
+}
+//*************************************************************************************************************
 int main(int argc, char* argv[])
 {
+	ReadResolutionFile();
+
 	LARGE_INTEGER qwTicksPerSec = { 0, 0 };
 	LARGE_INTEGER qwTime;
 	LONGLONG tickspersec;

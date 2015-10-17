@@ -1,10 +1,15 @@
 
-sampler mytex0 : register(s0);
+sampler mytex0 : register(s0) = sampler_state
+{
+	MinFilter = linear;
+	MagFilter = linear;
+	MipFilter = linear;
+};
 
 matrix matWorld;
 matrix matViewProj;
 
-float4 ambient;
+float4 ambient = { 1, 1, 1, 1 };
 float2 uv = { 1, 1 };
 
 void vs_main(

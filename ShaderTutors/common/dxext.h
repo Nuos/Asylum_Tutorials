@@ -62,6 +62,7 @@ public:
 	DXObject(IDirect3DDevice9* d3ddevice);
 	~DXObject();
 
+	bool CreatePlane(float width, float height, float utile, float vtile);
 	bool GenerateTangentFrame();
 	bool Load(const std::string& file);
 	bool Save(const std::string& file);

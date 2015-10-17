@@ -47,7 +47,6 @@ void ParticleSystem::Update()
 	D3DXCOLOR mid(0xffFF9347);
 	D3DXCOLOR outer(0xffff2222);
 
-	// részecskék frissitése
 	size_t i = 0;
 
 	while( i < particles.size() )
@@ -57,7 +56,6 @@ void ParticleSystem::Update()
 		if( p.Life < 30 )
 			p.Color.a = (float)p.Life / 30.0f;
 
-		// ha meghalt, akkor csere és nem lépünk
 		if( p.Life == 0 )
 		{
 			std::swap(particles[i], particles[particles.size() - 1]);
@@ -73,13 +71,11 @@ void ParticleSystem::Update()
 		}
 	}
 
-	// uj részecskék generálása (ha lehet)
 	D3DXVECTOR3 EmitterPosition(0, 0, 0);
 	float EmitterRadius = 0.5f;
 
 	while( particles.size() < maxcount )
 	{
-		// keresünk egy random poziciot a gömbön
 		float u = (float)(rand() % 100) / 100.0f;
 		float v = (float)(rand() % 100) / 100.0f;
 
