@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:51_CoreProfileMac/51_CoreProfileMac.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:70_Metal/70_Metal.xcodeproj">
+   </FileRef>
+</Workspace>

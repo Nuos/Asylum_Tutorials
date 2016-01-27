@@ -636,7 +636,7 @@ void SceneObject::Draw(OpenGLEffect* effect, bool transparent)
 
 void SceneObject::DrawFast(OpenGLEffect* effect)
 {
-	if( !mesh )
+	if( !mesh || !Visible )
 		return;
 
 	float world[16];

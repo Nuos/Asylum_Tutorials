@@ -4,8 +4,6 @@
 
 #include "../common/dxext.h"
 
-// TODO: mask
-
 // helper macros
 #define TITLE				"Shader sample 44: Simple water and light shafts"
 #define MYERROR(x)			{ std::cout << "* Error: " << x << "!\n"; }

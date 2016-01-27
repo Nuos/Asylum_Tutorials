@@ -748,7 +748,11 @@ void Render(float alpha, float elapsedtime)
 	GLVec3Transform(fwd, fwd, view);
 	GLVec3Subtract(eye, look, fwd);
 
-	GLMatrixPerspectiveRH(proj, M_PI / 3, 4.0f / 3.0f, 0.1f, 50.0f);
+	if( fullscreen )
+		GLMatrixPerspectiveRH(proj, M_PI / 3, (float)screenwidth / screenheight, 0.1f, 50.0f);
+	else
+		GLMatrixPerspectiveRH(proj, M_PI / 3, (float)surfvpwidth / surfvpheight, 0.1f, 50.0f);
+
 	GLMatrixLookAtRH(view, eye, look, up);
 	GLMatrixMultiply(viewproj, view, proj);
 
