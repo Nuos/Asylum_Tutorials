@@ -1,6 +1,26 @@
 
 #include "dds.h"
+#include "3Dmath.h"
+
+#if defined(USE_VULKAN_PREFIX)
+#include "vkx.h"
+
+#define FORMAT_A8R8G8B8			VK_FORMAT_B8G8R8A8_UNORM
+#define FORMAT_DXT1				VK_FORMAT_BC1_RGBA_UNORM_BLOCK
+#define FORMAT_DXT5				VK_FORMAT_BC3_UNORM_BLOCK
+#define FORMAT_G16R16F			VK_FORMAT_R16G16_SFLOAT
+#define FORMAT_A16B16G16R16F	VK_FORMAT_R16G16B16A16_SFLOAT
+#define FORMAT_G32R32F			VK_FORMAT_R32G32_SFLOAT
+#else
 #include "gl4x.h"
+
+#define FORMAT_A8R8G8B8			GLFMT_A8R8G8B8
+#define FORMAT_DXT1				GLFMT_DXT1
+#define FORMAT_DXT5				GLFMT_DXT5
+#define FORMAT_G16R16F			GLFMT_G16R16F
+#define FORMAT_A16B16G16R16F	GLFMT_A16B16G16R16F
+#define FORMAT_G32R32F			GLFMT_G32R32F
+#endif
 
 #include <cstdio>
 
@@ -397,6 +417,95 @@ static void BlockDecompressImageDXT5(DWORD width, DWORD height, BYTE* in, DWORD*
 	}
 }
 
+unsigned int GetImageSize(unsigned int width, unsigned int height, unsigned int bytes, unsigned int miplevels)
+{
+	unsigned int w = width;
+	unsigned int h = height;
+	unsigned int bytesize = 0;
+
+	for( unsigned int i = 0; i < miplevels; ++i )
+	{
+		bytesize += FUNC_PROTO(Max)<unsigned int>(1, w) * FUNC_PROTO(Max)<unsigned int>(1, h) * bytes;
+
+		w = FUNC_PROTO(Max)<unsigned int>(w / 2, 1);
+		h = FUNC_PROTO(Max)<unsigned int>(h / 2, 1);
+	}
+
+	return bytesize;
+}
+
+unsigned int GetCompressedImageSize(unsigned int width, unsigned int height, unsigned int miplevels, unsigned int format)
+{
+	unsigned int w = width;
+	unsigned int h = height;
+	unsigned int bytesize = 0;
+
+	if( format == FORMAT_DXT1 || format == FORMAT_DXT5 )
+	{
+		unsigned int mult = ((format == FORMAT_DXT5) ? 16 : 8);
+
+		if( w != h )
+		{
+			for( unsigned int i = 0; i < miplevels; ++i )
+			{
+				bytesize += FUNC_PROTO(Max)<unsigned int>(1, w / 4) * FUNC_PROTO(Max)<unsigned int>(1, h / 4) * mult;
+
+				w = FUNC_PROTO(Max)<unsigned int>(w / 2, 1);
+				h = FUNC_PROTO(Max)<unsigned int>(h / 2, 1);
+			}
+		}
+		else
+		{
+			bytesize = ((w / 4) * (h / 4) * mult);
+			w = bytesize;
+
+			for( unsigned int i = 1; i < miplevels; ++i )
+			{
+				w = FUNC_PROTO(Max)(mult, w / 4);
+				bytesize += w;
+			}
+		}
+	}
+
+	return bytesize;
+}
+
+unsigned int GetCompressedLevelSize(unsigned int width, unsigned int height, unsigned int level, unsigned int format)
+{
+	unsigned int w = width;
+	unsigned int h = height;
+	unsigned int bytesize = 0;
+
+	if( format == FORMAT_DXT1 || format == FORMAT_DXT5 )
+	{
+		unsigned int mult = ((format == FORMAT_DXT5) ? 16 : 8);
+
+		if( w != h )
+		{
+			w = FUNC_PROTO(Max)<unsigned int>(w / (1 << level), 1);
+			h = FUNC_PROTO(Max)<unsigned int>(h / (1 << level), 1);
+
+			bytesize = FUNC_PROTO(Max)<unsigned int>(1, w / 4) * FUNC_PROTO(Max)<unsigned int>(1, h / 4) * mult;
+		}
+		else
+		{
+			bytesize = ((w / 4) * (h / 4) * mult);
+
+			if( level > 0 )
+			{
+				w = bytesize;
+
+				for( unsigned int i = 0; i < level; ++i )
+					w = FUNC_PROTO(Max)<unsigned int>(mult, w / 4);
+
+				bytesize = w;
+			}
+		}
+	}
+
+	return bytesize;
+}
+
 bool LoadFromDDS(const char* file, DDS_Image_Info* outinfo)
 {
 	DDS_HEADER	header;
@@ -456,32 +565,32 @@ bool LoadFromDDS(const char* file, DDS_Image_Info* outinfo)
 	outinfo->Data		= 0;
 
 	if( header.ddspf.dwRGBBitCount == 32 )
-		outinfo->Format = GLFMT_A8R8G8B8;
+		outinfo->Format = FORMAT_A8R8G8B8;
 	else if( header.ddspf.dwRGBBitCount == 0 )
 		goto _fail;
 
 	if( header.ddspf.dwFlags & DDPF_FOURCC )
 	{
 		if( header.ddspf.dwFourCC == DDSPF_DXT1.dwFourCC )
-			outinfo->Format = GLFMT_DXT1;
+			outinfo->Format = FORMAT_DXT1;
 		else if( header.ddspf.dwFourCC == DDSPF_DXT5.dwFourCC )
-			outinfo->Format = GLFMT_DXT5;
+			outinfo->Format = FORMAT_DXT5;
 		else if( header.ddspf.dwFourCC == 0x70 )
-			outinfo->Format = GLFMT_G16R16F;
+			outinfo->Format = FORMAT_G16R16F;
 		else if( header.ddspf.dwFourCC == 0x71 )
-			outinfo->Format = GLFMT_A16B16G16R16F;
+			outinfo->Format = FORMAT_A16B16G16R16F;
 		else if( header.ddspf.dwFourCC == 0x73 )
-			outinfo->Format = GLFMT_G32R32F;
+			outinfo->Format = FORMAT_G32R32F;
 		else
 			goto _fail; // unsupported
 	}
 
 	if( header.dwCaps2 & DDSCAPS2_CUBEMAP )
 	{
-		if( outinfo->Format == GLFMT_DXT1 || outinfo->Format == GLFMT_DXT5 )
+		if( outinfo->Format == FORMAT_DXT1 || outinfo->Format == FORMAT_DXT5 )
 		{
 			// compressed cubemap
-			bytesize = GLGetCompressedImageSize(outinfo->Width, outinfo->Height, outinfo->MipLevels, outinfo->Format) * 6;
+			bytesize = GetCompressedImageSize(outinfo->Width, outinfo->Height, outinfo->MipLevels, outinfo->Format) * 6;
 
 			outinfo->Data = malloc(bytesize);
 			outinfo->DataSize = bytesize;
@@ -491,7 +600,7 @@ bool LoadFromDDS(const char* file, DDS_Image_Info* outinfo)
 		else
 		{
 			// uncompressed cubemap
-			bytesize = GLGetImageSize(outinfo->Width, outinfo->Height, (header.ddspf.dwRGBBitCount / 8), outinfo->MipLevels) * 6;
+			bytesize = GetImageSize(outinfo->Width, outinfo->Height, (header.ddspf.dwRGBBitCount / 8), outinfo->MipLevels) * 6;
 			outinfo->Data = malloc(bytesize);
 
 			fread((char*)outinfo->Data, 1, bytesize, infile);
@@ -500,10 +609,10 @@ bool LoadFromDDS(const char* file, DDS_Image_Info* outinfo)
 	}
 	else
 	{
-		if( outinfo->Format == GLFMT_DXT1 || outinfo->Format == GLFMT_DXT5 )
+		if( outinfo->Format == FORMAT_DXT1 || outinfo->Format == FORMAT_DXT5 )
 		{
 			// compressed
-			bytesize = GLGetCompressedImageSize(outinfo->Width, outinfo->Height, outinfo->MipLevels, outinfo->Format);
+			bytesize = GetCompressedImageSize(outinfo->Width, outinfo->Height, outinfo->MipLevels, outinfo->Format);
 
 			outinfo->Data = malloc(bytesize);
 			outinfo->DataSize = bytesize;
@@ -513,7 +622,7 @@ bool LoadFromDDS(const char* file, DDS_Image_Info* outinfo)
 		else
 		{
 			// uncompressed
-			bytesize = GLGetImageSize(outinfo->Width, outinfo->Height, (header.ddspf.dwRGBBitCount / 8), outinfo->MipLevels);
+			bytesize = GetImageSize(outinfo->Width, outinfo->Height, (header.ddspf.dwRGBBitCount / 8), outinfo->MipLevels);
 
 			outinfo->Data = malloc(bytesize);
 			outinfo->DataSize = bytesize;

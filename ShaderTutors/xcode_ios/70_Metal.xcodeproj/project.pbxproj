@@ -1,0 +1,367 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A600CE051C50E68F0064DE96 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A600CE031C50E68F0064DE96 /* Main.storyboard */; };
+		A600CE071C50E68F0064DE96 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A600CE061C50E68F0064DE96 /* Assets.xcassets */; };
+		A600CE0A1C50E68F0064DE96 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A600CE081C50E68F0064DE96 /* LaunchScreen.storyboard */; };
+		A69078A71C5632F3000CB725 /* teapot.qm in Resources */ = {isa = PBXBuildFile; fileRef = A69078A61C5632F3000CB725 /* teapot.qm */; };
+		A69078A91C564CBA000CB725 /* breakingthelaw.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = A69078A81C564CBA000CB725 /* breakingthelaw.mp3 */; };
+		A69078AB1C564D06000CB725 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A69078AA1C564D06000CB725 /* AudioToolbox.framework */; };
+		FEA547071CD4BB96000B475F /* Renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = FEA547051CD4BB96000B475F /* Renderer.mm */; };
+		FEA547081CD4BB96000B475F /* shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = FEA547061CD4BB96000B475F /* shaders.metal */; };
+		FEA547111CD4BC00000B475F /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = FEA5470B1CD4BC00000B475F /* AppDelegate.m */; };
+		FEA547121CD4BC00000B475F /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = FEA5470C1CD4BC00000B475F /* main.m */; };
+		FEA547131CD4BC00000B475F /* MetalView.mm in Sources */ = {isa = PBXBuildFile; fileRef = FEA5470E1CD4BC00000B475F /* MetalView.mm */; };
+		FEA547141CD4BC00000B475F /* MetalViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = FEA547101CD4BC00000B475F /* MetalViewController.mm */; };
+		FEA547171CD4BC82000B475F /* 3Dmath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FEA547151CD4BC82000B475F /* 3Dmath.cpp */; };
+		FEA547191CD4BD42000B475F /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FEA547181CD4BD42000B475F /* AVFoundation.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A600CDF71C50E68F0064DE96 /* 70_Metal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = 70_Metal.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A600CE041C50E68F0064DE96 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		A600CE061C50E68F0064DE96 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A600CE091C50E68F0064DE96 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		A600CE0B1C50E68F0064DE96 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A69078A61C5632F3000CB725 /* teapot.qm */ = {isa = PBXFileReference; lastKnownFileType = file; name = teapot.qm; path = ../media/meshes/teapot.qm; sourceTree = "<group>"; };
+		A69078A81C564CBA000CB725 /* breakingthelaw.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = breakingthelaw.mp3; path = ../media/sound/breakingthelaw.mp3; sourceTree = "<group>"; };
+		A69078AA1C564D06000CB725 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		FEA547051CD4BB96000B475F /* Renderer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = Renderer.mm; path = ../70_Metal/Renderer.mm; sourceTree = "<group>"; };
+		FEA547061CD4BB96000B475F /* shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; name = shaders.metal; path = ../70_Metal/shaders.metal; sourceTree = "<group>"; };
+		FEA5470A1CD4BC00000B475F /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = ../common/AppDelegate.h; sourceTree = "<group>"; };
+		FEA5470B1CD4BC00000B475F /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AppDelegate.m; path = ../common/AppDelegate.m; sourceTree = "<group>"; };
+		FEA5470C1CD4BC00000B475F /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = ../common/main.m; sourceTree = "<group>"; };
+		FEA5470D1CD4BC00000B475F /* MetalView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MetalView.h; path = ../common/MetalView.h; sourceTree = "<group>"; };
+		FEA5470E1CD4BC00000B475F /* MetalView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = MetalView.mm; path = ../common/MetalView.mm; sourceTree = "<group>"; };
+		FEA5470F1CD4BC00000B475F /* MetalViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MetalViewController.h; path = ../common/MetalViewController.h; sourceTree = "<group>"; };
+		FEA547101CD4BC00000B475F /* MetalViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = MetalViewController.mm; path = ../common/MetalViewController.mm; sourceTree = "<group>"; };
+		FEA547151CD4BC82000B475F /* 3Dmath.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = 3Dmath.cpp; path = ../common/3Dmath.cpp; sourceTree = "<group>"; };
+		FEA547161CD4BC82000B475F /* 3Dmath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = 3Dmath.h; path = ../common/3Dmath.h; sourceTree = "<group>"; };
+		FEA547181CD4BD42000B475F /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A600CDF41C50E68F0064DE96 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FEA547191CD4BD42000B475F /* AVFoundation.framework in Frameworks */,
+				A69078AB1C564D06000CB725 /* AudioToolbox.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A600CDEE1C50E68F0064DE96 = {
+			isa = PBXGroup;
+			children = (
+				FEA547051CD4BB96000B475F /* Renderer.mm */,
+				FEA547061CD4BB96000B475F /* shaders.metal */,
+				FEA547091CD4BBBA000B475F /* Common */,
+				A600CE181C5245240064DE96 /* Media */,
+				A600CDF91C50E68F0064DE96 /* Supporting Files */,
+				A69078AC1C564D12000CB725 /* Frameworks */,
+				A600CDF81C50E68F0064DE96 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A600CDF81C50E68F0064DE96 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A600CDF71C50E68F0064DE96 /* 70_Metal.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A600CDF91C50E68F0064DE96 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				A600CE031C50E68F0064DE96 /* Main.storyboard */,
+				A600CE081C50E68F0064DE96 /* LaunchScreen.storyboard */,
+				A600CE061C50E68F0064DE96 /* Assets.xcassets */,
+				A600CE0B1C50E68F0064DE96 /* Info.plist */,
+			);
+			name = "Supporting Files";
+			path = 70_Metal;
+			sourceTree = "<group>";
+		};
+		A600CE181C5245240064DE96 /* Media */ = {
+			isa = PBXGroup;
+			children = (
+				A69078A81C564CBA000CB725 /* breakingthelaw.mp3 */,
+				A69078A61C5632F3000CB725 /* teapot.qm */,
+			);
+			name = Media;
+			sourceTree = "<group>";
+		};
+		A69078AC1C564D12000CB725 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				FEA547181CD4BD42000B475F /* AVFoundation.framework */,
+				A69078AA1C564D06000CB725 /* AudioToolbox.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		FEA547091CD4BBBA000B475F /* Common */ = {
+			isa = PBXGroup;
+			children = (
+				FEA547151CD4BC82000B475F /* 3Dmath.cpp */,
+				FEA547161CD4BC82000B475F /* 3Dmath.h */,
+				FEA5470A1CD4BC00000B475F /* AppDelegate.h */,
+				FEA5470B1CD4BC00000B475F /* AppDelegate.m */,
+				FEA5470C1CD4BC00000B475F /* main.m */,
+				FEA5470D1CD4BC00000B475F /* MetalView.h */,
+				FEA5470E1CD4BC00000B475F /* MetalView.mm */,
+				FEA5470F1CD4BC00000B475F /* MetalViewController.h */,
+				FEA547101CD4BC00000B475F /* MetalViewController.mm */,
+			);
+			name = Common;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A600CDF61C50E68F0064DE96 /* 70_Metal */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A600CE0E1C50E68F0064DE96 /* Build configuration list for PBXNativeTarget "70_Metal" */;
+			buildPhases = (
+				A600CDF31C50E68F0064DE96 /* Sources */,
+				A600CDF41C50E68F0064DE96 /* Frameworks */,
+				A600CDF51C50E68F0064DE96 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = 70_Metal;
+			productName = 70_Metal;
+			productReference = A600CDF71C50E68F0064DE96 /* 70_Metal.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A600CDEF1C50E68F0064DE96 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0720;
+				ORGANIZATIONNAME = Asylum;
+				TargetAttributes = {
+					A600CDF61C50E68F0064DE96 = {
+						CreatedOnToolsVersion = 7.2;
+					};
+				};
+			};
+			buildConfigurationList = A600CDF21C50E68F0064DE96 /* Build configuration list for PBXProject "70_Metal" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A600CDEE1C50E68F0064DE96;
+			productRefGroup = A600CDF81C50E68F0064DE96 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A600CDF61C50E68F0064DE96 /* 70_Metal */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A600CDF51C50E68F0064DE96 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A69078A91C564CBA000CB725 /* breakingthelaw.mp3 in Resources */,
+				A600CE0A1C50E68F0064DE96 /* LaunchScreen.storyboard in Resources */,
+				A600CE071C50E68F0064DE96 /* Assets.xcassets in Resources */,
+				A69078A71C5632F3000CB725 /* teapot.qm in Resources */,
+				A600CE051C50E68F0064DE96 /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A600CDF31C50E68F0064DE96 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FEA547141CD4BC00000B475F /* MetalViewController.mm in Sources */,
+				FEA547171CD4BC82000B475F /* 3Dmath.cpp in Sources */,
+				FEA547081CD4BB96000B475F /* shaders.metal in Sources */,
+				FEA547071CD4BB96000B475F /* Renderer.mm in Sources */,
+				FEA547121CD4BC00000B475F /* main.m in Sources */,
+				FEA547111CD4BC00000B475F /* AppDelegate.m in Sources */,
+				FEA547131CD4BC00000B475F /* MetalView.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		A600CE031C50E68F0064DE96 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A600CE041C50E68F0064DE96 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		A600CE081C50E68F0064DE96 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A600CE091C50E68F0064DE96 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		A600CE0C1C50E68F0064DE96 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A600CE0D1C50E68F0064DE96 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A600CE0F1C50E68F0064DE96 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+					USE_METAL_PREFIX,
+				);
+				INFOPLIST_FILE = 70_Metal/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "Asylum.-0-Metal";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		A600CE101C50E68F0064DE96 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				GCC_PREPROCESSOR_DEFINITIONS = USE_METAL_PREFIX;
+				INFOPLIST_FILE = 70_Metal/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "Asylum.-0-Metal";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A600CDF21C50E68F0064DE96 /* Build configuration list for PBXProject "70_Metal" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A600CE0C1C50E68F0064DE96 /* Debug */,
+				A600CE0D1C50E68F0064DE96 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A600CE0E1C50E68F0064DE96 /* Build configuration list for PBXNativeTarget "70_Metal" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A600CE0F1C50E68F0064DE96 /* Debug */,
+				A600CE101C50E68F0064DE96 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A600CDEF1C50E68F0064DE96 /* Project object */;
+}

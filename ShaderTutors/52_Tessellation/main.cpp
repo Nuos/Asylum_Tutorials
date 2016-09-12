@@ -744,14 +744,14 @@ void Render(float alpha, float elapsedtime)
 	cameraangle.smooth(orient, alpha);
 
 	GLVec3Subtract(fwd, look, eye);
-	GLMatrixRotationYawPitchRoll(view, orient[0], orient[1], 0);
+	GLMatrixRotationRollPitchYaw(view, 0, orient[1], orient[0]);
 	GLVec3Transform(fwd, fwd, view);
 	GLVec3Subtract(eye, look, fwd);
 
 	if( fullscreen )
-		GLMatrixPerspectiveRH(proj, M_PI / 3, (float)screenwidth / screenheight, 0.1f, 50.0f);
+		GLMatrixPerspectiveFovRH(proj, M_PI / 3, (float)screenwidth / screenheight, 0.1f, 50.0f);
 	else
-		GLMatrixPerspectiveRH(proj, M_PI / 3, (float)surfvpwidth / surfvpheight, 0.1f, 50.0f);
+		GLMatrixPerspectiveFovRH(proj, M_PI / 3, (float)surfvpwidth / surfvpheight, 0.1f, 50.0f);
 
 	GLMatrixLookAtRH(view, eye, look, up);
 	GLMatrixMultiply(viewproj, view, proj);

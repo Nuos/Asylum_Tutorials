@@ -146,7 +146,7 @@ void OpenGLAddonTask::Internal_Render(IRenderingContext* context)
 	float tmp2[16];
 
 	GLMatrixLookAtRH(view, eye, look, up);
-	GLMatrixPerspectiveRH(
+	GLMatrixPerspectiveFovRH(
 		proj, (60.0f * 3.14159f) / 180.f, 
 		(float)rendertarget->GetWidth() / (float)rendertarget->GetHeight(), 0.1f, 100.0f);
 	

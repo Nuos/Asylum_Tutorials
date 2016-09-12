@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\common\3Dmath.cpp" />
     <ClCompile Include="..\common\dds.cpp" />
     <ClCompile Include="..\common\gl4x.cpp" />
     <ClCompile Include="..\52_Compute\main.cpp" />
@@ -18,6 +19,7 @@
     <ClCompile Include="..\extern\qglextensions.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\common\3Dmath.h" />
     <ClInclude Include="..\common\dds.h" />
     <ClInclude Include="..\common\gl4x.h" />
     <ClInclude Include="..\extern\glcorearb.h" />

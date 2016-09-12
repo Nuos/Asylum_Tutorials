@@ -145,7 +145,7 @@ void Render(float alpha, float elapsedtime)
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	GLMatrixLookAtRH(view, eye, look, up);
-	GLMatrixPerspectiveRH(proj, (60.0f * 3.14159f) / 180.f,  (float)screenwidth / (float)screenheight, 0.1f, 100.0f);
+	GLMatrixPerspectiveFovRH(proj, (60.0f * 3.14159f) / 180.f,  (float)screenwidth / (float)screenheight, 0.1f, 100.0f);
 	
 	GLMatrixMultiply(viewproj, view, proj);
 

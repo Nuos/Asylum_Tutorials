@@ -17,6 +17,8 @@ namespace mystl
 		size_t _find(const value_type& value) const;
 
 	public:
+		typedef std::pair<size_t, bool> pairib;
+
 		static const size_t npos = 0xffffffff;
 
 		compare comp;
@@ -25,7 +27,7 @@ namespace mystl
 		orderedarray(const orderedarray& other);
 		~orderedarray();
 
-		bool insert(const value_type& value);
+		pairib insert(const value_type& value);
 
 		void erase(const value_type& value);
 		void erase_at(size_t index);
@@ -106,7 +108,7 @@ namespace mystl
 	}
 	
 	template <typename value_type, typename compare>
-	bool orderedarray<value_type, compare>::insert(const value_type& value)
+	typename orderedarray<value_type, compare>::pairib orderedarray<value_type, compare>::insert(const value_type& value)
 	{
 		size_t i = 0;
 
@@ -117,7 +119,7 @@ namespace mystl
 			i = _find(value);
 
 			if( i < mysize && !(comp(data[i], value) || comp(value, data[i])) )
-				return false;
+				return pairib(SIZE_MAX, false);
 
 			size_t count = (mysize - i);
 			new(data + mysize) value_type;
@@ -131,7 +133,7 @@ namespace mystl
 		data[i] = value;
 		++mysize;
 
-		return true;
+		return pairib(i, true);
 	}
 	
 	template <typename value_type, typename compare>

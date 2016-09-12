@@ -12,6 +12,9 @@
     <ClCompile Include="..\common\dds.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\3Dmath.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="extern">
@@ -41,6 +44,9 @@
       <Filter>extern</Filter>
     </ClInclude>
     <ClInclude Include="..\common\dds.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\3Dmath.h">
       <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>

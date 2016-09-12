@@ -300,25 +300,25 @@ void Render(float alpha, float elapsedtime)
 	lightangle.smooth(lightorient, alpha);
 
 	// setup light
-	GLMatrixRotationYawPitchRoll(lightview, lightorient[0], lightorient[1], 0);
+	GLMatrixRotationRollPitchYaw(lightview, 0, lightorient[1], lightorient[0]);
 	GLVec3Transform(lightpos, lightpos, lightview);
 
 	lightpos[1] += 0.5f;
 
 	GLFitToBox(clipplanes[0], clipplanes[1], lightpos, look, scenebox);
-	GLMatrixPerspectiveRH(lightproj, GL_HALF_PI, 1, clipplanes[0], clipplanes[1]);
+	GLMatrixPerspectiveFovRH(lightproj, GL_HALF_PI, 1, clipplanes[0], clipplanes[1]);
 
 	GLMatrixLookAtRH(lightview, lightpos, look, up);
 	GLMatrixMultiply(lightvp, lightview, lightproj);
 
 	// setup camera
-	GLMatrixRotationYawPitchRoll(view, orient[0], orient[1], 0);
+	GLMatrixRotationRollPitchYaw(view, 0, orient[1], orient[0]);
 	GLVec3Transform(eye, eye, view);
 	
 	eye[1] += 0.5f;
 
 	GLMatrixLookAtRH(view, eye, look, up);
-	GLMatrixPerspectiveRH(proj, GL_HALF_PI, (float)screenwidth / (float)screenheight, 0.1f, 30.0f);
+	GLMatrixPerspectiveFovRH(proj, GL_HALF_PI, (float)screenwidth / (float)screenheight, 0.1f, 30.0f);
 	GLMatrixMultiply(viewproj, view, proj);
 
 	// render shadow map

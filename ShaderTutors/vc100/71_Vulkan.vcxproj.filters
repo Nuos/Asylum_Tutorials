@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\71_Vulkan\main.cpp" />
+    <ClCompile Include="..\common\othervk.cpp" />
+    <ClCompile Include="..\common\3Dmath.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\vkx.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\dds.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{a03552ae-7e0f-44c4-9e21-10e2fa387e54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{d0f8f9a4-aa61-42dc-bb7e-93840d9403f6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\common\3Dmath.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\vkx.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\dds.h">
+      <Filter>common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\media\shadersVK\71_vulkan.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersVK\71_vulkan.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersVK\textured_frag.spirv">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersVK\textured_vert.spirv">
+      <Filter>shaders</Filter>
+    </None>
+  </ItemGroup>
+</Project>

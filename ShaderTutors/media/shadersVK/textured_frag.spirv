@@ -1,0 +1,42 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 1
+; Bound: 20
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %outColor %tex
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 400
+               OpSourceExtension "GL_ARB_separate_shader_objects"
+               OpSourceExtension "GL_ARB_shading_language_420pack"
+               OpName %main "main"
+               OpName %outColor "outColor"
+               OpName %sampler1 "sampler1"
+               OpName %tex "tex"
+               OpDecorate %outColor Location 0
+               OpDecorate %sampler1 DescriptorSet 0
+               OpDecorate %sampler1 Binding 1
+               OpDecorate %tex Location 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+   %outColor = OpVariable %_ptr_Output_v4float Output
+         %10 = OpTypeImage %float 2D 0 0 0 1 Unknown
+         %11 = OpTypeSampledImage %10
+%_ptr_UniformConstant_11 = OpTypePointer UniformConstant %11
+   %sampler1 = OpVariable %_ptr_UniformConstant_11 UniformConstant
+    %v2float = OpTypeVector %float 2
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+        %tex = OpVariable %_ptr_Input_v2float Input
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %14 = OpLoad %11 %sampler1
+         %18 = OpLoad %v2float %tex
+         %19 = OpImageSampleImplicitLod %v4float %14 %18
+               OpStore %outColor %19
+               OpReturn
+               OpFunctionEnd

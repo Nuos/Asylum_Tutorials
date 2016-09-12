@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\common\3Dmath.cpp" />
     <ClCompile Include="..\common\dds.cpp" />
     <ClCompile Include="..\common\fpscamera.cpp" />
     <ClCompile Include="..\common\gl4x.cpp" />
@@ -20,6 +21,7 @@
     <ClCompile Include="..\extern\qglextensions.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\common\3Dmath.h" />
     <ClInclude Include="..\common\dds.h" />
     <ClInclude Include="..\common\fpscamera.h" />
     <ClInclude Include="..\common\gl4x.h" />
@@ -46,7 +48,6 @@
     <None Include="..\media\shadersGL\pbr_spotlight.frag" />
     <None Include="..\media\shadersGL\pbr_spotlight.vert" />
     <None Include="..\media\shadersGL\sao.frag" />
-    <None Include="..\media\shadersGL\sao.vert" />
     <None Include="..\media\shadersGL\shadowmap_variance.frag" />
     <None Include="..\media\shadersGL\shadowmap_variance.vert" />
     <None Include="..\media\shadersGL\sky.frag" />

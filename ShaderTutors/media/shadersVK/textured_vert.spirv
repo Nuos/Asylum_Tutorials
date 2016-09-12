@@ -1,0 +1,90 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 1
+; Bound: 43
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %_ %my_Position %tex %myTexcoord0 %my_Normal
+               OpSource GLSL 400
+               OpSourceExtension "GL_ARB_separate_shader_objects"
+               OpSourceExtension "GL_ARB_shading_language_420pack"
+               OpName %main "main"
+               OpName %gl_PerVertex "gl_PerVertex"
+               OpMemberName %gl_PerVertex 0 "gl_Position"
+               OpName %_ ""
+               OpName %UniformData "UniformData"
+               OpMemberName %UniformData 0 "matWorld"
+               OpMemberName %UniformData 1 "matViewProj"
+               OpMemberName %UniformData 2 "lightPos"
+               OpMemberName %UniformData 3 "eyePos"
+               OpMemberName %UniformData 4 "matColor"
+               OpName %uniforms "uniforms"
+               OpName %my_Position "my_Position"
+               OpName %tex "tex"
+               OpName %myTexcoord0 "myTexcoord0"
+               OpName %my_Normal "my_Normal"
+               OpMemberDecorate %gl_PerVertex 0 BuiltIn Position
+               OpDecorate %gl_PerVertex Block
+               OpMemberDecorate %UniformData 0 ColMajor
+               OpMemberDecorate %UniformData 0 Offset 0
+               OpMemberDecorate %UniformData 0 MatrixStride 16
+               OpMemberDecorate %UniformData 1 ColMajor
+               OpMemberDecorate %UniformData 1 Offset 64
+               OpMemberDecorate %UniformData 1 MatrixStride 16
+               OpMemberDecorate %UniformData 2 Offset 128
+               OpMemberDecorate %UniformData 3 Offset 144
+               OpMemberDecorate %UniformData 4 Offset 160
+               OpDecorate %UniformData Block
+               OpDecorate %uniforms DescriptorSet 0
+               OpDecorate %uniforms Binding 0
+               OpDecorate %my_Position Location 0
+               OpDecorate %tex Location 0
+               OpDecorate %myTexcoord0 Location 2
+               OpDecorate %my_Normal Location 1
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%gl_PerVertex = OpTypeStruct %v4float
+%_ptr_Output_gl_PerVertex = OpTypePointer Output %gl_PerVertex
+          %_ = OpVariable %_ptr_Output_gl_PerVertex Output
+        %int = OpTypeInt 32 1
+         %12 = OpConstant %int 0
+%mat4v4float = OpTypeMatrix %v4float 4
+%UniformData = OpTypeStruct %mat4v4float %mat4v4float %v4float %v4float %v4float
+%_ptr_Uniform_UniformData = OpTypePointer Uniform %UniformData
+   %uniforms = OpVariable %_ptr_Uniform_UniformData Uniform
+         %17 = OpConstant %int 1
+%_ptr_Uniform_mat4v4float = OpTypePointer Uniform %mat4v4float
+    %v3float = OpTypeVector %float 3
+%_ptr_Input_v3float = OpTypePointer Input %v3float
+%my_Position = OpVariable %_ptr_Input_v3float Input
+         %27 = OpConstant %float 1
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+    %v2float = OpTypeVector %float 2
+%_ptr_Output_v2float = OpTypePointer Output %v2float
+        %tex = OpVariable %_ptr_Output_v2float Output
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+%myTexcoord0 = OpVariable %_ptr_Input_v2float Input
+  %my_Normal = OpVariable %_ptr_Input_v3float Input
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %19 = OpAccessChain %_ptr_Uniform_mat4v4float %uniforms %17
+         %20 = OpLoad %mat4v4float %19
+         %21 = OpAccessChain %_ptr_Uniform_mat4v4float %uniforms %12
+         %22 = OpLoad %mat4v4float %21
+         %26 = OpLoad %v3float %my_Position
+         %28 = OpCompositeExtract %float %26 0
+         %29 = OpCompositeExtract %float %26 1
+         %30 = OpCompositeExtract %float %26 2
+         %31 = OpCompositeConstruct %v4float %28 %29 %30 %27
+         %32 = OpMatrixTimesVector %v4float %22 %31
+         %33 = OpMatrixTimesVector %v4float %20 %32
+         %35 = OpAccessChain %_ptr_Output_v4float %_ %12
+               OpStore %35 %33
+         %41 = OpLoad %v2float %myTexcoord0
+               OpStore %tex %41
+               OpReturn
+               OpFunctionEnd

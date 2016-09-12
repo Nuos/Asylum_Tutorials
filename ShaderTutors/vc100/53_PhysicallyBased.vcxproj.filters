@@ -18,6 +18,9 @@
     <ClCompile Include="..\common\gl4x.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\3Dmath.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="extern">
@@ -47,6 +50,9 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\common\gl4x.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\3Dmath.h">
       <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
@@ -97,9 +103,6 @@
       <Filter>shaders</Filter>
     </None>
     <None Include="..\media\shadersGL\sao.frag">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="..\media\shadersGL\sao.vert">
       <Filter>shaders</Filter>
     </None>
     <None Include="..\media\shadersGL\bilateralblur.frag">

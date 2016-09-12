@@ -1149,10 +1149,13 @@ HRESULT DXLoadMeshFromQM(LPCTSTR file, DWORD options, LPDIRECT3DDEVICE9 d3ddevic
 			fread(&color, sizeof(D3DXCOLOR), 1, infile);
 			mat.MatD3D.Emissive = (D3DCOLORVALUE&)color;
 
+			if( version >= 2 )
+				fseek(infile, 16, SEEK_CUR);	// uvscale
+
 			fread(&mat.MatD3D.Power, sizeof(float), 1, infile);
 			fread(&mat.MatD3D.Diffuse.a, sizeof(float), 1, infile);
 
-			fread(&unused, 4, 1, infile);
+			fread(&unused, 4, 1, infile);	// blendmode
 			DXReadString(infile, buff);
 
 			if( buff[1] != ',' )

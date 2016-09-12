@@ -312,11 +312,11 @@ void Render(float alpha, float elapsedtime)
 
 	cameraangle.smooth(orient, alpha);
 
-	GLMatrixRotationYawPitchRoll(view, orient[0], orient[1], 0);
+	GLMatrixRotationRollPitchYaw(view, 0, orient[1], orient[0]);
 	GLVec3Transform(eye, eye, view);
 
 	GLFitToBox(clipplanes[0], clipplanes[1], eye, look, scenebox);
-	GLMatrixPerspectiveRH(proj, (60.0f * 3.14159f) / 180.f,  (float)screenwidth / (float)screenheight, clipplanes[0], clipplanes[1]);
+	GLMatrixPerspectiveFovRH(proj, (60.0f * 3.14159f) / 180.f,  (float)screenwidth / (float)screenheight, clipplanes[0], clipplanes[1]);
 
 	GLMatrixLookAtRH(view, eye, look, up);
 	GLMatrixMultiply(viewproj, view, proj);

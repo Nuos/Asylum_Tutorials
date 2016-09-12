@@ -74,7 +74,7 @@ void FPSCamera::GetViewVectors(float forward[3], float right[3], float up[3])
 
 void FPSCamera::GetProjectionMatrix(float out[16])
 {
-	GLMatrixPerspectiveRH(out, Fov, Aspect, Near, Far);
+	GLMatrixPerspectiveFovRH(out, Fov, Aspect, Near, Far);
 }
 
 void FPSCamera::SetEyePosition(float x, float y, float z)

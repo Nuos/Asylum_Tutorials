@@ -17,6 +17,7 @@
     <ClCompile Include="..\51_MultiThreading\win32window.cpp" />
     <ClCompile Include="..\51_MultiThreading\window1.cpp" />
     <ClCompile Include="..\51_MultiThreading\window2.cpp" />
+    <ClCompile Include="..\common\3Dmath.cpp" />
     <ClCompile Include="..\common\dds.cpp" />
     <ClCompile Include="..\common\gl4x.cpp" />
     <ClCompile Include="..\51_MultiThreading\main.cpp" />
@@ -27,6 +28,7 @@
     <ClInclude Include="..\51_MultiThreading\drawingitem.h" />
     <ClInclude Include="..\51_MultiThreading\renderingcore.h" />
     <ClInclude Include="..\51_MultiThreading\win32window.h" />
+    <ClInclude Include="..\common\3Dmath.h" />
     <ClInclude Include="..\common\blockingqueue.hpp" />
     <ClInclude Include="..\common\dds.h" />
     <ClInclude Include="..\common\gl4x.h" />

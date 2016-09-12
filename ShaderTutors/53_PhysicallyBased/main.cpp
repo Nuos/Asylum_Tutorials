@@ -35,6 +35,7 @@
 
 #define NUM_OBJECTS			16
 #define NUM_LIGHTS			5
+//#define DRAW_SAO_ONLY
 
 // helper macros
 #define TITLE				"Shader sample 53: Physically based rendering"
@@ -70,6 +71,8 @@ public:
 		EnvProbe = 2,
 		Area = 3
 	};
+
+	bool Enabled;
 
 	PBRLight();
 	~PBRLight();
@@ -303,6 +306,8 @@ PBRLight::PBRLight()
 	
 	angles[0] = cosf(GLDegreesToRadians(30));
 	angles[1] = cosf(GLDegreesToRadians(45));
+
+	Enabled = true;
 }
 
 PBRLight::~PBRLight()
@@ -414,7 +419,7 @@ void PBRLight::GetViewProj(float out[16]) const
 		GLVec3Add(look, position, direction);
 
 		GLMatrixLookAtRH(view, position, look, up);
-		GLMatrixPerspectiveRH(proj, acosf(angles[1]) * 2.0f, 1, clipplanes[0], clipplanes[1]);
+		GLMatrixPerspectiveFovRH(proj, acosf(angles[1]) * 2.0f, 1, clipplanes[0], clipplanes[1]);
 		GLMatrixMultiply(out, view, proj);
 	}
 
@@ -1596,7 +1601,7 @@ void RenderLocalProbe()
 	GLVec3Set(look, eye[0], eye[1] - 1, eye[2]);
 	GLMatrixLookAtRH(views[3], eye, look, up);
 
-	GLMatrixPerspectiveRH(proj, GL_PI * 0.5f, 1.0f, 0.1f, 20.0f);
+	GLMatrixPerspectiveFovRH(proj, GL_PI * 0.5f, 1.0f, 0.1f, 20.0f);
 
 	OpenGLFramebuffer* probe = new OpenGLFramebuffer(LOCAL_PROBE_SIZE, LOCAL_PROBE_SIZE);
 
@@ -1659,6 +1664,9 @@ void RenderShadowmap()
 {
 	const PBRLight& light = *lights[LIGHT_ID_SPOT];
 
+	if( !light.Enabled )
+		return;
+
 	float lightviewproj[16];
 	float texelsize[] = { 1.0f / SHADOWMAP_SIZE, 1.0f / SHADOWMAP_SIZE };
 
@@ -1706,17 +1714,24 @@ void RenderSAO(float proj[16])
 		return;
 
 	float clipinfo[4] = {
+#if 0
+		2.0f * camera->Near * camera->Far,
+		camera->Far - camera->Near,
+		-(camera->Far + camera->Near),
+#else
+		// NOTE: depth buffer is [0, 1] !!!
 		camera->Near * camera->Far,
 		camera->Near - camera->Far,
 		camera->Far,
+#endif
 		screenheight / (2.0f * tanf(camera->Fov * 0.5f))
 	};
 
 	float projinfo[4] = {
-		-2.0f / (screenwidth * proj[0]),
-		-2.0f / (screenheight * proj[5]),
-		(1.0f - proj[8]) / proj[0],
-		(1.0f + proj[9]) / proj[5]
+		2.0f / (screenwidth * proj[0]),
+		2.0f / (screenheight * proj[5]),
+		-1.0f / proj[0],
+		-1.0f / proj[5]
 	};
 
 	rawsao->Set();
@@ -1780,6 +1795,9 @@ void RenderScene(float viewproj[16], float eye[3], bool transparent)
 	for( int i = 0; i < NUM_LIGHTS; ++i )
 	{
 		const PBRLight& light = *lights[i];
+
+		if( !light.Enabled )
+			continue;
 
 		switch( light.GetType() )
 		{
@@ -2105,6 +2123,20 @@ void Render(float alpha, float elapsedtime)
 	// STEP 7: tone map
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
+#ifdef DRAW_SAO_ONLY
+	GLSetTexture(GL_TEXTURE0, GL_TEXTURE_2D, blurredsao->GetColorAttachment(0));
+	glDisable(GL_DEPTH_TEST);
+
+	float axis[] = { 0, 1, 1, 0 };
+	bilateralblur->SetVector("axis", axis);
+	bilateralblur->Begin();
+	{
+		screenquad->Draw();
+	}
+	bilateralblur->End();
+
+	glEnable(GL_DEPTH_TEST);
+#else
 	GLSetTexture(GL_TEXTURE0, GL_TEXTURE_2D, framebuffer->GetColorAttachment(0));
 	GLSetTexture(GL_TEXTURE1, GL_TEXTURE_2D, adaptedlumcurr->GetColorAttachment(0));
 
@@ -2113,6 +2145,7 @@ void Render(float alpha, float elapsedtime)
 		screenquad->Draw();
 	}
 	tonemap->End();
+#endif
 
 	// draw debug
 	if( phydebug )
