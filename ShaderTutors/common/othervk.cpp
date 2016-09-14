@@ -449,34 +449,38 @@ bool InitVK(HWND hwnd)
 
 void UninitVK()
 {
-	glslang::FinalizeProcess();
+	if( !uninited )
+	{
+		uninited = true;
 
-	UninitScene();
+		glslang::FinalizeProcess();
+		UninitScene();
 
-	VulkanContentRegistry::Release();
-	VulkanMemorySubAllocator::Release();
+		VulkanContentRegistry::Release();
+		VulkanMemorySubAllocator::Release();
 
-	for( uint32_t i = 0; i < driverinfo.swapchainimgcount; ++i ) {
-		vkDestroyImageView(driverinfo.device, driverinfo.swapchainimageviews[i], 0);
+		for( uint32_t i = 0; i < driverinfo.swapchainimgcount; ++i ) {
+			vkDestroyImageView(driverinfo.device, driverinfo.swapchainimageviews[i], 0);
+		}
+
+		delete[] driverinfo.swapchainimageviews;
+		delete[] driverinfo.swapchainimages;
+		delete[] driverinfo.presentmodes;
+		delete[] driverinfo.queueprops;
+		delete[] driverinfo.gpus;
+
+		//vkDestroyPipelineCache(driverinfo.device, driverinfo.pipelinecache, 0);
+		vkDestroySwapchainKHR(driverinfo.device, driverinfo.swapchain, 0);
+		vkDestroyCommandPool(driverinfo.device, driverinfo.commandpool, 0);
+		vkDestroyDevice(driverinfo.device, 0);
+		vkDestroySurfaceKHR(driverinfo.inst, driverinfo.surface, 0);
+
+	#ifdef ENABLE_VALIDATION
+		driverinfo.vkDestroyDebugReportCallbackEXT(driverinfo.inst, driverinfo.callback, 0);
+	#endif
+
+		vkDestroyInstance(driverinfo.inst, NULL);
 	}
-
-	delete[] driverinfo.swapchainimageviews;
-	delete[] driverinfo.swapchainimages;
-	delete[] driverinfo.presentmodes;
-	delete[] driverinfo.queueprops;
-	delete[] driverinfo.gpus;
-
-	//vkDestroyPipelineCache(driverinfo.device, driverinfo.pipelinecache, 0);
-	vkDestroySwapchainKHR(driverinfo.device, driverinfo.swapchain, 0);
-	vkDestroyCommandPool(driverinfo.device, driverinfo.commandpool, 0);
-	vkDestroyDevice(driverinfo.device, 0);
-	vkDestroySurfaceKHR(driverinfo.inst, driverinfo.surface, 0);
-
-#ifdef ENABLE_VALIDATION
-	driverinfo.vkDestroyDebugReportCallbackEXT(driverinfo.inst, driverinfo.callback, 0);
-#endif
-
-	vkDestroyInstance(driverinfo.inst, NULL);
 }
 
 void Adjust(tagRECT& out, long& width, long& height, DWORD style, DWORD exstyle, bool menu = false)
@@ -533,6 +537,7 @@ LRESULT WINAPI WndProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam
 	{
 	case WM_CLOSE:
 		ShowWindow(hWnd, SW_HIDE);
+		UninitVK();
 		break;
 
 	case WM_DESTROY:
@@ -811,8 +816,6 @@ int main(int argc, char* argv[])
 	}
 
 _end:
-	UninitVK();
-
 	if( gdiplustoken )
 		Gdiplus::GdiplusShutdown(gdiplustoken);
 

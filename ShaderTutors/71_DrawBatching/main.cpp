@@ -389,7 +389,13 @@ bool InitScene()
 	framepump->FrameFinished = FrameFinished;
 
 	// create render pass
-	depthbuffer = VulkanImage::Create2D(VK_FORMAT_D24_UNORM_S8_UINT, screenwidth, screenheight, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+	VkFormat depthformat = VK_FORMAT_D24_UNORM_S8_UINT;
+
+	if( VulkanQueryFormatSupport(VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) )
+		depthformat = VK_FORMAT_D32_SFLOAT_S8_UINT;
+
+	depthbuffer = VulkanImage::Create2D(depthformat, screenwidth, screenheight, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+	VK_ASSERT(depthbuffer);
 
 	rpattachments[0].format			= driverinfo.format;
 	rpattachments[0].samples		= VK_SAMPLE_COUNT_1_BIT;

@@ -6,6 +6,8 @@
 #include <cmath>
 #include <GdiPlus.h>
 
+//#define __DEBUG_SUBALLOCATOR
+
 extern void AssembleSPIRV(std::string& result, const std::string& file);
 
 VulkanDriverInfo driverinfo;
@@ -335,7 +337,11 @@ const VulkanMemorySubAllocator::MemoryBatch& VulkanMemorySubAllocator::FindSuita
 				else
 					offset = AdjustBufferOffset(prev->offset + prev->size, memreqs.alignment, usageflags);
 
-				emptyspace = batches[i].totalsize - offset;
+				if( batches[i].totalsize > offset )
+					emptyspace = batches[i].totalsize - offset;
+				else
+					emptyspace = 0;
+
 				prev = it;
 			} else {
 				// space between allocs
@@ -343,8 +349,11 @@ const VulkanMemorySubAllocator::MemoryBatch& VulkanMemorySubAllocator::FindSuita
 					offset = AdjustImageOffset(prev->offset + prev->size, memreqs.alignment);
 				else
 					offset = AdjustBufferOffset(prev->offset + prev->size, memreqs.alignment, usageflags);
-				
-				emptyspace = it->offset - offset;
+
+				if( it->offset > offset )
+					emptyspace = it->offset - offset;
+				else
+					emptyspace = 0;
 
 				prev = it;
 				++it;
@@ -374,6 +383,11 @@ const VulkanMemorySubAllocator::MemoryBatch& VulkanMemorySubAllocator::FindSuita
 
 		outoffset = record.offset;
 		batch.allocations.insert(record);
+
+#ifdef __DEBUG_SUBALLOCATOR
+		if( optimal )
+			printf("Optimal memory allocated in batch %llu (offset = %llu, size = %llu)\n", batchid, record.offset, record.size);
+#endif
 
 		return batch;
 	}
@@ -406,7 +420,7 @@ const VulkanMemorySubAllocator::MemoryBatch& VulkanMemorySubAllocator::FindSuita
 
 	if( res != VK_SUCCESS )
 		throw std::bad_alloc("Memory heap is out of memory");
-		
+
 	newbatch.mappedcount	= 0;
 	newbatch.totalsize		= allocinfo.allocationSize;
 	newbatch.mappedrange	= 0;
@@ -418,6 +432,11 @@ const VulkanMemorySubAllocator::MemoryBatch& VulkanMemorySubAllocator::FindSuita
 
 	newbatch.allocations.insert(record);
 	outoffset = record.offset;
+
+#ifdef __DEBUG_SUBALLOCATOR
+	if( optimal )
+		printf("Optimal memory allocated in batch %llu (offset = %llu, size = %llu)\n", batchid, record.offset, record.size);
+#endif
 
 	MemoryBatchArray::pairib result = batches.insert(newbatch);
 	VK_ASSERT(result.second);
@@ -685,8 +704,13 @@ VulkanBuffer* VulkanBuffer::Create(VkBufferUsageFlags usage, VkDeviceSize size, 
 
 	vkGetBufferMemoryRequirements(driverinfo.device, ret->buffer, &ret->memreqs);
 
-	if( needsstaging )
+	if( needsstaging ) {
+		// this is pretty retarded btw.
 		needsstaging = (UINT32_MAX == VulkanMemoryManager().GetMemoryTypeForFlags(ret->memreqs.memoryTypeBits, ret->exflags));
+
+		if( !needsstaging )
+			flags = ret->exflags;
+	}
 
 	ret->memory = VulkanMemoryManager().AllocateForBuffer(ret->memreqs, flags, buffercreateinfo.usage);
 
@@ -785,16 +809,17 @@ void VulkanBuffer::UnmapContents()
 
 void VulkanBuffer::UploadToVRAM(VkCommandBuffer commandbuffer)
 {
-	VK_ASSERT(stagingbuffer != 0);
+	if( stagingbuffer )
+	{
+		VkBufferCopy region;
 
-	VkBufferCopy region;
+		region.srcOffset	= 0;
+		region.dstOffset	= 0;
+		//region.size			= memreqs.size;
+		region.size			= originalsize;
 
-	region.srcOffset	= 0;
-	region.dstOffset	= 0;
-	//region.size			= memreqs.size;
-	region.size			= originalsize;
-
-	vkCmdCopyBuffer(commandbuffer, stagingbuffer, buffer, 1, &region);
+		vkCmdCopyBuffer(commandbuffer, stagingbuffer, buffer, 1, &region);
+	}
 }
 
 void VulkanBuffer::DeleteStagingBuffer()
@@ -903,7 +928,7 @@ VulkanImage* VulkanImage::Create2D(VkFormat format, uint32_t width, uint32_t hei
 	else if( formatprops.linearTilingFeatures & feature )
 		imagecreateinfo.tiling = VK_IMAGE_TILING_LINEAR;
 	else {
-		delete ret;
+		ret->Release();
 		return NULL;
 	}
 
@@ -2037,6 +2062,7 @@ void VulkanBasePipeline::UpdateDescriptorSet(uint32_t group, uint32_t set)
 
 		if( descsetwrites[i].descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT )
 		{
+			VK_ASSERT(dsgroup.descimageinfos[i].imageView != NULL);
 			descsetwrites[i].pImageInfo = &dsgroup.descimageinfos[i];
 		}
 
@@ -3286,4 +3312,12 @@ void VulkanSubmitTempCommandBuffer(VkCommandBuffer commandbuffer, bool wait)
 
 		vkFreeCommandBuffers(driverinfo.device, driverinfo.commandpool, 1, &commandbuffer);
 	}
+}
+
+bool VulkanQueryFormatSupport(VkFormat format, VkFormatFeatureFlags features)
+{
+	VkFormatProperties formatprops;
+	vkGetPhysicalDeviceFormatProperties(driverinfo.gpus[0], format, &formatprops);
+
+	return ((formatprops.optimalTilingFeatures & features) == features);
 }

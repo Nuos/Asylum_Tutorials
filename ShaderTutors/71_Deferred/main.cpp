@@ -117,7 +117,13 @@ bool InitScene()
 	framepump = new VulkanFramePump();
 
 	// create main render pass
-	depthbuffer = VulkanImage::Create2D(VK_FORMAT_D24_UNORM_S8_UINT, screenwidth, screenheight, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+	VkFormat depthformat = VK_FORMAT_D24_UNORM_S8_UINT;
+
+	if( VulkanQueryFormatSupport(VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) )
+		depthformat = VK_FORMAT_D32_SFLOAT_S8_UINT;
+
+	depthbuffer = VulkanImage::Create2D(depthformat, screenwidth, screenheight, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+	VK_ASSERT(depthbuffer);
 
 	rpattachments[0].format			= driverinfo.format;
 	rpattachments[0].samples		= VK_SAMPLE_COUNT_1_BIT;
@@ -137,7 +143,7 @@ bool InitScene()
 	rpattachments[1].stencilStoreOp	= VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	rpattachments[1].initialLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	rpattachments[1].finalLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	rpattachments[1].flags			= 0;	// VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT
+	rpattachments[1].flags			= 0;
 
 	rpattachments[2].format			= VK_FORMAT_R16G16B16A16_SFLOAT;
 	rpattachments[2].samples		= VK_SAMPLE_COUNT_1_BIT;
@@ -440,6 +446,9 @@ void InitializeAccumPass()
 
 	accumdiffirrad = VulkanImage::Create2D(VK_FORMAT_R16G16B16A16_SFLOAT, screenwidth, screenheight, 1, VK_IMAGE_USAGE_STORAGE_BIT|VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
 	accumspecirrad = VulkanImage::Create2D(VK_FORMAT_R16G16B16A16_SFLOAT, screenwidth, screenheight, 1, VK_IMAGE_USAGE_STORAGE_BIT|VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+
+	VK_ASSERT(accumdiffirrad);
+	VK_ASSERT(accumspecirrad);
 
 	// pipeline
 	VulkanSpecializationInfo specinfo;
@@ -972,15 +981,15 @@ void Render(float alpha, float elapsedtime)
 
 	vkCmdDispatch(commandbuffer, workgroupsx, workgroupsy, 1);
 
-	barrier.Reset(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+	barrier.Reset(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 	{
-		barrier.ImageLayoutTransfer(accumdiffirrad->GetImage(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		barrier.ImageLayoutTransfer(accumspecirrad->GetImage(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		barrier.ImageLayoutTransfer(accumdiffirrad->GetImage(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_INPUT_ATTACHMENT_READ_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		barrier.ImageLayoutTransfer(accumspecirrad->GetImage(), VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_INPUT_ATTACHMENT_READ_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 	barrier.Enlist(commandbuffer);
 
-	accumdiffirrad->StoreLayout(VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	accumspecirrad->StoreLayout(VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	accumdiffirrad->StoreLayout(VK_ACCESS_INPUT_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	accumspecirrad->StoreLayout(VK_ACCESS_INPUT_ATTACHMENT_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	// must clear all attachments
 	clearcolors[0].color.float32[0] = 0.017f;

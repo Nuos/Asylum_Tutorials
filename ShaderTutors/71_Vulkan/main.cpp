@@ -64,7 +64,13 @@ bool InitScene()
 	VK_ASSERT(res == VK_SUCCESS);
 
 	// create render pass
-	depthbuffer = VulkanImage::Create2D(VK_FORMAT_D24_UNORM_S8_UINT, screenwidth, screenheight, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+	VkFormat depthformat = VK_FORMAT_D24_UNORM_S8_UINT;
+
+	if( VulkanQueryFormatSupport(VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) )
+		depthformat = VK_FORMAT_D32_SFLOAT_S8_UINT;
+
+	depthbuffer = VulkanImage::Create2D(depthformat, screenwidth, screenheight, 1, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+	VK_ASSERT(depthbuffer);
 
 	rpattachments[0].format			= driverinfo.format;
 	rpattachments[0].samples		= VK_SAMPLE_COUNT_1_BIT;
@@ -143,7 +149,7 @@ bool InitScene()
 
 	// create cube
 	vertexbuffer = VulkanBuffer::Create(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 24 * sizeof(VulkanCommonVertex), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	indexbuffer = VulkanBuffer::Create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 16 * sizeof(uint16_t), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	indexbuffer = VulkanBuffer::Create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 36 * sizeof(uint16_t), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
 	VulkanCommonVertex* vdata = (VulkanCommonVertex*)vertexbuffer->MapContents(0, 0);
 	float width = 1, height = 1, depth = 1;

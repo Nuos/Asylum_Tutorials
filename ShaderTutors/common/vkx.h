@@ -24,7 +24,7 @@
 #	define VK_ASSERT(x)	if( !(x) ) throw 1
 #endif
 
-#define VK_NUM_QUEUED_FRAMES	2
+#define VK_NUM_QUEUED_FRAMES	1 //2
 #define VK_ARRAY_SIZE(x)		(sizeof(x) / sizeof(x[0]))
 #define VK_SAFE_DELETE(x)		if( x ) { delete (x); (x) = NULL; }
 #define VK_SAFE_RELEASE(x)		if( x ) { (x)->Release(); (x) = NULL; }
@@ -649,6 +649,8 @@ public:
 VkVertexInputBindingDescription VulkanMakeBindingDescription(uint32_t binding, VkVertexInputRate inputrate, uint32_t stride);
 VkCommandBuffer VulkanCreateTempCommandBuffer(bool begin = true);
 void VulkanSubmitTempCommandBuffer(VkCommandBuffer commandbuffer, bool wait = true);
+
+bool VulkanQueryFormatSupport(VkFormat format, VkFormatFeatureFlags features);
 
 extern VulkanDriverInfo driverinfo;
 
