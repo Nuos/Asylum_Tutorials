@@ -94,12 +94,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugReportCallback(
 	const char*					pMessage,
 	void*						pUserData)
 {
-	std::cerr << pMessage << std::endl;
-
 	// validation layer bug
 	if( strcmp(pMessage, "Cannot clear attachment 1 with invalid first layout VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.") == 0 )
 		return VK_FALSE;
 
+	std::cerr << pMessage << std::endl;
 	__debugbreak();
 
 	return VK_FALSE;

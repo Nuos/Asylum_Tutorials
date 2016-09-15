@@ -9,13 +9,15 @@
 #define NUM_LIGHTS						512
 #define LIGHT_RADIUS					2.0f
 
+#define UNIFORM_BUFFER_SIZE				4096
 #define GBUFFER_PASS_UNIFORM_OFFSET		0
 #define ACCUM_PASS_UNIFORM_OFFSET		256
 #define FORWARD_PASS_UNIFORM_OFFSET		1024
 #define FLARES_PASS_UNIFORM_OFFSET		1280
 
 // TODO:
-// - meg kell duplikalni az uniform buffereket
+// - light buffert megduplazni
+// - neha elszall a flaretex betoltesekor...
 // - alias
 
 extern long screenwidth;
@@ -87,6 +89,7 @@ VulkanFramePump*		framepump			= 0;
 VulkanAABox				particlevolume(-13.2f, 2.0f, -5.7f, 13.2f, 14.4f, 5.7f);
 
 SpectatorCamera			camera;
+uint32_t				currentphysicsframe	= 0;
 
 void InitializeGBufferPass();
 void InitializeAccumPass();
@@ -261,7 +264,7 @@ bool InitScene()
 	idata[2] = 2;	idata[5] = 2;
 
 	// create uniform buffer (16 KB)
-	uniforms = VulkanBuffer::Create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT|VK_BUFFER_USAGE_TRANSFER_DST_BIT, 16 * 1024, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	uniforms = VulkanBuffer::Create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT|VK_BUFFER_USAGE_TRANSFER_DST_BIT, UNIFORM_BUFFER_SIZE, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	// create substitute textures
 	supplytexture = VulkanImage::CreateFromFile("../media/textures/vk_logo.jpg", true);
@@ -464,7 +467,7 @@ void InitializeAccumPass()
 	accumpasspipeline->SetDescriptorSetLayoutImageBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
 	accumpasspipeline->SetDescriptorSetLayoutImageBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
 	accumpasspipeline->SetDescriptorSetLayoutImageBinding(5, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
-	accumpasspipeline->SetDescriptorSetLayoutBufferBinding(6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT);
+	accumpasspipeline->SetDescriptorSetLayoutBufferBinding(6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, VK_SHADER_STAGE_COMPUTE_BIT);
 
 	VkDescriptorImageInfo imginfo1 = *gbuffernormals->GetImageInfo();
 	VkDescriptorImageInfo imginfo2 = *gbufferdepth->GetImageInfo();
@@ -478,6 +481,9 @@ void InitializeAccumPass()
 	imginfo4.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	imginfo5.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+	VkDescriptorBufferInfo buffinfo1 = *lightbuffer->GetBufferInfo();
+	buffinfo1.range = NUM_LIGHTS * sizeof(LightParticle);
+
 	accumpasspipeline->AllocateDescriptorSets(1);
 	{
 		accumpasspipeline->SetDescriptorSetGroupBufferInfo(0, 0, &accumuniforminfo);
@@ -486,7 +492,7 @@ void InitializeAccumPass()
 		accumpasspipeline->SetDescriptorSetGroupImageInfo(0, 3, &imginfo3);
 		accumpasspipeline->SetDescriptorSetGroupImageInfo(0, 4, &imginfo4);
 		accumpasspipeline->SetDescriptorSetGroupImageInfo(0, 5, &imginfo5);
-		accumpasspipeline->SetDescriptorSetGroupBufferInfo(0, 6, lightbuffer->GetBufferInfo());
+		accumpasspipeline->SetDescriptorSetGroupBufferInfo(0, 6, &buffinfo1);
 	}
 	accumpasspipeline->UpdateDescriptorSet(0, 0);
 
@@ -540,7 +546,7 @@ void InitializeForwardPass()
 		forwardpasspipeline->UpdateDescriptorSet(0, i);
 	}
 
-	forwardpasspipeline->SetDepth(VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS);
+	forwardpasspipeline->SetDepth(VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL);
 	forwardpasspipeline->SetViewport(0, 0, (float)screenwidth, (float)screenheight);
 	forwardpasspipeline->SetScissor(0, 0, screenwidth, screenheight);
 
@@ -598,15 +604,18 @@ void InitializeFlaresPass()
 	flarespasspipeline->SetVertexInputBinding(0, VulkanMakeBindingDescription(0, VK_VERTEX_INPUT_RATE_VERTEX, screenquad->GetVertexStride()));
 	
 	flarespasspipeline->SetDescriptorSetLayoutBufferBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
-	flarespasspipeline->SetDescriptorSetLayoutBufferBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+	flarespasspipeline->SetDescriptorSetLayoutBufferBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT);
 	flarespasspipeline->SetDescriptorSetLayoutImageBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	VkDescriptorImageInfo imginfo1 = *flaretexture->GetImageInfo();
 	imginfo1.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	
+	VkDescriptorBufferInfo buffinfo1 = *lightbuffer->GetBufferInfo();
+	buffinfo1.range = NUM_LIGHTS * sizeof(LightParticle);
+
 	flarespasspipeline->AllocateDescriptorSets(1);
 	flarespasspipeline->SetDescriptorSetGroupBufferInfo(0, 0, &flaresuniforminfo);
-	flarespasspipeline->SetDescriptorSetGroupBufferInfo(0, 1, lightbuffer->GetBufferInfo());
+	flarespasspipeline->SetDescriptorSetGroupBufferInfo(0, 1, &buffinfo1);
 	flarespasspipeline->SetDescriptorSetGroupImageInfo(0, 2, &imginfo1);
 	flarespasspipeline->UpdateDescriptorSet(0, 0);
 
@@ -673,7 +682,7 @@ void GenerateParticles()
 		VulkanColor(1, 1, 0, 1),
 	};
 
-	lightbuffer = VulkanBuffer::Create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, NUM_LIGHTS * sizeof(LightParticle), VK_MEMORY_PROPERTY_SHARED_BIT);
+	lightbuffer = VulkanBuffer::Create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_NUM_QUEUED_FRAMES * NUM_LIGHTS * sizeof(LightParticle), VK_MEMORY_PROPERTY_SHARED_BIT);
 	VK_ASSERT(lightbuffer != NULL);
 
 	LightParticle* particles = (LightParticle*)lightbuffer->MapContents(0, 0);
@@ -690,12 +699,16 @@ void GenerateParticles()
 		z = particlevolume.Min[2] + z * (particlevolume.Max[2] - particlevolume.Min[2]);
 		v = 0.4f + v * (3.0f - 0.4f);
 
-		particles[i].color = colors[rand() % VK_ARRAY_SIZE(colors)];
-		particles[i].radius = LIGHT_RADIUS;
+		particles[i].color = particles[i + NUM_LIGHTS].color	= colors[rand() % VK_ARRAY_SIZE(colors)];
+		particles[i].radius = particles[i + NUM_LIGHTS].radius	= LIGHT_RADIUS;
 
 		VKVec4Set(particles[i].previous, x, y, z, 1);
 		VKVec4Set(particles[i].current, x, y, z, 1);
 		VKVec3Set(particles[i].velocity, 0, v * d, 0);
+
+		VKVec4Set(particles[i + NUM_LIGHTS].previous, x, y, z, 1);
+		VKVec4Set(particles[i + NUM_LIGHTS].current, x, y, z, 1);
+		VKVec3Set(particles[i + NUM_LIGHTS].velocity, 0, v * d, 0);
 	}
 
 	lightbuffer->UnmapContents();
@@ -726,34 +739,43 @@ void UpdateParticles(float dt)
 
 	particlevolume.GetPlanes(planes);
 
+	uint32_t prevphysicsframe = (currentphysicsframe + VK_NUM_QUEUED_FRAMES - 1) % VK_NUM_QUEUED_FRAMES;
+
 	LightParticle* particles = (LightParticle*)lightbuffer->MapContents(0, 0);
+	LightParticle* readparticles = particles + prevphysicsframe * NUM_LIGHTS;
+	LightParticle* writeparticles = particles + currentphysicsframe * NUM_LIGHTS;
 
 	for( int i = 0; i < NUM_LIGHTS; ++i ) {
-		LightParticle& p = particles[i];
+		const LightParticle& oldp = readparticles[i];
+		LightParticle& newp = writeparticles[i];
+
+		newp.velocity[0] = oldp.velocity[0];
+		newp.velocity[1] = oldp.velocity[1];
+		newp.velocity[2] = oldp.velocity[2];
 
 		// integrate
-		p.previous[0] = p.current[0];
-		p.previous[1] = p.current[1];
-		p.previous[2] = p.current[2];
+		newp.previous[0] = oldp.current[0];
+		newp.previous[1] = oldp.current[1];
+		newp.previous[2] = oldp.current[2];
 
-		p.current[0] += p.velocity[0] * dt;
-		p.current[1] += p.velocity[1] * dt;
-		p.current[2] += p.velocity[2] * dt;
+		newp.current[0] = oldp.current[0] + oldp.velocity[0] * dt;
+		newp.current[1] = oldp.current[1] + oldp.velocity[1] * dt;
+		newp.current[2] = oldp.current[2] + oldp.velocity[2] * dt;
 
 		// detect collision
 		besttoi = 2;
 
-		b[0] = p.current[0] - p.previous[0];
-		b[1] = p.current[1] - p.previous[1];
-		b[2] = p.current[2] - p.previous[2];
+		b[0] = newp.current[0] - newp.previous[0];
+		b[1] = newp.current[1] - newp.previous[1];
+		b[2] = newp.current[2] - newp.previous[2];
 
 		for( int j = 0; j < 6; ++j ) {
 			// use radius == 0.5
 			denom = VKVec3Dot(b, planes[j]);
-			pastcollision = (VKVec3Dot(p.previous, planes[j]) + planes[j][3] < 0.5f);
+			pastcollision = (VKVec3Dot(newp.previous, planes[j]) + planes[j][3] < 0.5f);
 
 			if( denom < -1e-4f ) {
-				toi = (0.5f - VKVec3Dot(p.previous, planes[j]) - planes[j][3]) / denom;
+				toi = (0.5f - VKVec3Dot(newp.previous, planes[j]) - planes[j][3]) / denom;
 
 				if( ((toi <= 1 && toi >= 0) ||		// normal case
 					(toi < 0 && pastcollision)) &&	// allow past collision
@@ -767,11 +789,11 @@ void UpdateParticles(float dt)
 
 		if( besttoi <= 1 ) {
 			// resolve constraint
-			p.current[0] = (1 - besttoi) * p.previous[0] + besttoi * p.current[0];
-			p.current[1] = (1 - besttoi) * p.previous[1] + besttoi * p.current[1];
-			p.current[2] = (1 - besttoi) * p.previous[2] + besttoi * p.current[2];
+			newp.current[0] = (1 - besttoi) * newp.previous[0] + besttoi * newp.current[0];
+			newp.current[1] = (1 - besttoi) * newp.previous[1] + besttoi * newp.current[1];
+			newp.current[2] = (1 - besttoi) * newp.previous[2] + besttoi * newp.current[2];
 
-			impulse = -VKVec3Dot(*bestplane, p.velocity);
+			impulse = -VKVec3Dot(*bestplane, newp.velocity);
 
 			// perturb normal vector
 			noise = ((rand() % 100) / 100.0f) * VK_PI * 0.333333f - VK_PI * 0.166666f; // [-pi/6, pi/6]
@@ -791,18 +813,18 @@ void UpdateParticles(float dt)
 			VKMatrixInverse(Ainv, A);
 			VKVec3Transform(vy, b, Ainv);
 
-			energy = VKVec3Length(p.velocity);
+			energy = VKVec3Length(newp.velocity);
 
-			p.velocity[0] += 2 * impulse * vy[0];
-			p.velocity[1] += 2 * impulse * vy[1];
-			p.velocity[2] += 2 * impulse * vy[2];
+			newp.velocity[0] += 2 * impulse * vy[0];
+			newp.velocity[1] += 2 * impulse * vy[1];
+			newp.velocity[2] += 2 * impulse * vy[2];
 
 			// must conserve energy
-			VKVec3Normalize(p.velocity, p.velocity);
+			VKVec3Normalize(newp.velocity, newp.velocity);
 
-			p.velocity[0] *= energy;
-			p.velocity[1] *= energy;
-			p.velocity[2] *= energy;
+			newp.velocity[0] *= energy;
+			newp.velocity[1] *= energy;
+			newp.velocity[2] *= energy;
 		}
 	}
 
@@ -818,6 +840,8 @@ void UpdateParticles(float dt)
 		barrier.BufferAccessBarrier(lightbuffer->GetBuffer(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 	}
 	VulkanSubmitTempCommandBuffer(copycmd, false);
+
+	currentphysicsframe = (currentphysicsframe + 1) % VK_NUM_QUEUED_FRAMES;
 }
 
 void Event_KeyDown(unsigned char keycode)
@@ -973,8 +997,10 @@ void Render(float alpha, float elapsedtime)
 	gbufferdepth->StoreLayout(VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	// accumulation pass
+	uint32_t lightbufferoffset = currentphysicsframe * NUM_LIGHTS * sizeof(LightParticle);
+
 	vkCmdBindPipeline(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, accumpasspipeline->GetPipeline());
-	vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, accumpasspipeline->GetPipelineLayout(), 0, 1, accumpasspipeline->GetDescriptorSets(0), 0, NULL);
+	vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, accumpasspipeline->GetPipelineLayout(), 0, 1, accumpasspipeline->GetDescriptorSets(0), 1, &lightbufferoffset);
 
 	uint32_t workgroupsx = (screenwidth + (screenwidth % 16)) / 16;
 	uint32_t workgroupsy = (screenheight + (screenheight % 16)) / 16;
@@ -1048,7 +1074,7 @@ void Render(float alpha, float elapsedtime)
 
 		// render flares
 		vkCmdBindPipeline(commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, flarespasspipeline->GetPipeline());
-		vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, flarespasspipeline->GetPipelineLayout(), 0, 1, flarespasspipeline->GetDescriptorSets(0), 0, NULL);
+		vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, flarespasspipeline->GetPipelineLayout(), 0, 1, flarespasspipeline->GetDescriptorSets(0), 1, &lightbufferoffset);
 		vkCmdSetViewport(commandbuffer, 0, 1, flarespasspipeline->GetViewport());
 		vkCmdSetScissor(commandbuffer, 0, 1, flarespasspipeline->GetScissor());
 
