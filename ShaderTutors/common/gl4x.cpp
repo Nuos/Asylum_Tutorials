@@ -101,7 +101,7 @@ static Gdiplus::Bitmap* Win32LoadPicture(const std::wstring& file)
 		FILE_ATTRIBUTE_NORMAL,
 		NULL);
 
-	if( !hFile )
+	if( hFile == INVALID_HANDLE_VALUE )
 		return 0;
 
 	DWORD len = GetFileSize(hFile, NULL);
