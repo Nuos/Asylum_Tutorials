@@ -114,7 +114,7 @@ void main()
 	int index;
 
 	// STEP 1: calculate coefficients
-	if( gl_LocalInvocationID == 0 )
+	if( gl_LocalInvocationIndex == 0 )
 	{
 		for( span = 0; span < numknots - 1; ++span )
 		{

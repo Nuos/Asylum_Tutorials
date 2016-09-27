@@ -135,7 +135,7 @@ void main()
 	int index1, index2;
 
 	// STEP 1: calculate coefficients
-	if( gl_LocalInvocationID == 0 )
+	if( gl_LocalInvocationIndex == 0 )
 	{
 		// DON'T MAKE FUNCTION OF THIS!!! IT WON'T WORK!!!
 		for( int spanU = 0; spanU < numknotsU - 1; ++spanU )
