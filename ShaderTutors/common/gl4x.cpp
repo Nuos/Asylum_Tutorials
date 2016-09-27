@@ -92,53 +92,12 @@ static Gdiplus::Bitmap* Win32LoadPicture(const std::wstring& file)
 		Gdiplus::GdiplusStartup(&gdiplustoken, &gdiplustartup, NULL);
 	}
 
-	HANDLE hFile = CreateFileW(
-		file.c_str(), 
-		FILE_READ_DATA,
-		FILE_SHARE_READ,
-		NULL, 
-		OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL,
-		NULL);
+	Gdiplus::Bitmap* bitmap = Gdiplus::Bitmap::FromFile(file.c_str(), FALSE);
 
-	if( hFile == INVALID_HANDLE_VALUE )
-		return 0;
-
-	DWORD len = GetFileSize(hFile, NULL);
-	HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE|GMEM_NODISCARD, len); // leak
-
-	if( !hGlobal )
-	{
-		CloseHandle(hFile);
-		return 0;
+	if( bitmap->GetLastStatus() != Gdiplus::Ok ) {
+		delete bitmap;
+		bitmap = 0;
 	}
-
-	char* lpBuffer = reinterpret_cast<char*>(GlobalLock(hGlobal));
-	DWORD dwBytesRead = 0;
-
-	while( ReadFile(hFile, lpBuffer, 4096, &dwBytesRead, NULL) )
-	{
-		lpBuffer += dwBytesRead;
-
-		if( dwBytesRead == 0 )
-			break;
-
-		dwBytesRead = 0;
-	}
-
-	CloseHandle(hFile);
-	GlobalUnlock(hGlobal);
-
-	IStream* pStream = NULL;
-
-	if( CreateStreamOnHGlobal(hGlobal, FALSE, &pStream) != S_OK )
-	{
-		GlobalFree(hGlobal);
-		return 0;
-	}
-
-	Gdiplus::Bitmap* bitmap = Gdiplus::Bitmap::FromStream(pStream);
-	pStream->Release();
 
 	return bitmap;
 }

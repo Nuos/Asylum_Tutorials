@@ -4,6 +4,7 @@
 #include <string>
 #include <set>
 #include <vector>
+#include <cassert>
 
 #include "../common/dxext.h"
 #include "../common/orderedarray.hpp"
@@ -554,7 +555,7 @@ void GenerateEdges(edgeset& out, LPD3DXMESH mesh)
 			e.v2 = p2;
 			e.n1 = n;
 
-			if( !out.insert(e) )
+			if( !out.insert(e).second )
 				std::cout << "Crack in mesh (first triangle)\n";
 		}
 
@@ -566,7 +567,7 @@ void GenerateEdges(edgeset& out, LPD3DXMESH mesh)
 			e.v2 = p3;
 			e.n1 = n;
 
-			if( !out.insert(e) )
+			if( !out.insert(e).second )
 				std::cout << "Crack in mesh (first triangle)\n";
 		}
 
@@ -578,7 +579,7 @@ void GenerateEdges(edgeset& out, LPD3DXMESH mesh)
 			e.v2 = p1;
 			e.n1 = n;
 
-			if( !out.insert(e) )
+			if( !out.insert(e).second )
 				std::cout << "Crack in mesh (first triangle)\n";
 		}
 	}
@@ -740,19 +741,20 @@ void ExtrudeSilhouette(ShadowCaster& caster, const D3DXVECTOR3& lightpos)
 	for( size_t i = 0; i < caster.silhouette.size(); ++i )
 	{
 		const Edge& e = caster.silhouette[i];
+		assert(i * 4 + 3 <= 0xffff);
 
 		vdata[i * 4 + 0] = D3DXVECTOR4(e.v1 + ltocenter, 1);
 		vdata[i * 4 + 1] = D3DXVECTOR4(e.v1 - lp, 0);
 		vdata[i * 4 + 2] = D3DXVECTOR4(e.v2 + ltocenter, 1);
 		vdata[i * 4 + 3] = D3DXVECTOR4(e.v2 - lp, 0);
 
-		idata[i * 6 + 0] = i * 4 + 0;
-		idata[i * 6 + 1] = i * 4 + 1;
-		idata[i * 6 + 2] = i * 4 + 2;
+		idata[i * 6 + 0] = (WORD)(i * 4 + 0);
+		idata[i * 6 + 1] = (WORD)(i * 4 + 1);
+		idata[i * 6 + 2] = (WORD)(i * 4 + 2);
 
-		idata[i * 6 + 3] = i * 4 + 2;
-		idata[i * 6 + 4] = i * 4 + 1;
-		idata[i * 6 + 5] = i * 4 + 3;
+		idata[i * 6 + 3] = (WORD)(i * 4 + 2);
+		idata[i * 6 + 4] = (WORD)(i * 4 + 1);
+		idata[i * 6 + 5] = (WORD)(i * 4 + 3);
 	}
 
 	// back cap
@@ -762,18 +764,19 @@ void ExtrudeSilhouette(ShadowCaster& caster, const D3DXVECTOR3& lightpos)
 	for( size_t i = 0; i < caster.silhouette.size(); ++i )
 	{
 		const Edge& e = caster.silhouette[i];
+		assert(i * 4 + 3 <= 0xffff);
 
-		idata[i * 3 + 0] = i * 4 + 3;
-		idata[i * 3 + 1] = i * 4 + 1;
-		idata[i * 3 + 2] = caster.silhouette.size() * 4;
+		idata[i * 3 + 0] = (WORD)(i * 4 + 3);
+		idata[i * 3 + 1] = (WORD)(i * 4 + 1);
+		idata[i * 3 + 2] = (WORD)(caster.silhouette.size() * 4);
 	}
 
 	// front cap
 	WORD*			idata2			= NULL;
 	D3DXVECTOR3*	vdata2			= NULL;
-	WORD			verticesadded	= caster.silhouette.size() * 4 + 1;
-	DWORD			indicesadded	= caster.silhouette.size() * 9;
-	WORD			i1, i2, i3;
+	size_t			verticesadded	= caster.silhouette.size() * 4 + 1;
+	size_t			indicesadded	= caster.silhouette.size() * 9;
+	size_t			i1, i2, i3;
 	D3DXVECTOR3		*v1, *v2, *v3;
 	D3DXVECTOR3		a, b, n;
 	float			dist;

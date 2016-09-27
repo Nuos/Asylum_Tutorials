@@ -13,7 +13,7 @@ layout (location = 3) in vec2 tex;
 layout (location = 4) in vec4 cpos;
 
 layout (location = 0) out vec4 outNormal;
-layout (location = 1) out vec4 outDepth;
+layout (location = 1) out float outDepth;
 
 void main()
 {
@@ -31,5 +31,5 @@ void main()
 	float depth = cpos.z / cpos.w;
 	
 	outNormal = vec4(n, 1.0);
-	outDepth = vec4(depth);
+	outDepth = depth;
 }

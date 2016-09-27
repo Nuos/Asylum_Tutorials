@@ -9,16 +9,16 @@
 #define NUM_LIGHTS						512
 #define LIGHT_RADIUS					2.0f
 
-#define UNIFORM_BUFFER_SIZE				4096
+#define UNIFORM_BUFFER_SIZE				2048
 #define GBUFFER_PASS_UNIFORM_OFFSET		0
 #define ACCUM_PASS_UNIFORM_OFFSET		256
 #define FORWARD_PASS_UNIFORM_OFFSET		1024
 #define FLARES_PASS_UNIFORM_OFFSET		1280
 
 // TODO:
-// - light buffert megduplazni
-// - neha elszall a flaretex betoltesekor...
 // - alias
+// - tempsubmit leak
+// - uniform buffer duplication?
 
 extern long screenwidth;
 extern long screenheight;
@@ -112,7 +112,7 @@ bool InitScene()
 	VkAttachmentReference	depthreference		= {};
 
 	VkSubpassDescription	subpasses[2];
-	VkSubpassDependency		dependency			= {};
+	VkSubpassDependency		dependencies[2];
 	VkRenderPassCreateInfo	renderpassinfo		= {};
 	VkFramebufferCreateInfo	framebufferinfo		= {};
 	VkResult				res;
@@ -222,13 +222,21 @@ bool InitScene()
 	subpasses[1].preserveAttachmentCount	= 0;
 	subpasses[1].pPreserveAttachments		= NULL;
 
-	dependency.srcSubpass		= 0;
-	dependency.srcAccessMask	= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	dependency.srcStageMask		= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.dstSubpass		= 1;
-	dependency.dstAccessMask	= VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-	dependency.dstStageMask		= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-	dependency.dependencyFlags	= 0;
+	dependencies[0].srcSubpass		= VK_SUBPASS_EXTERNAL;
+	dependencies[0].srcAccessMask	= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	dependencies[0].srcStageMask	= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependencies[0].dstSubpass		= 0;
+	dependencies[0].dstAccessMask	= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	dependencies[0].dstStageMask	= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependencies[0].dependencyFlags	= VK_DEPENDENCY_BY_REGION_BIT;
+
+	dependencies[1].srcSubpass		= 0;
+	dependencies[1].srcAccessMask	= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	dependencies[1].srcStageMask	= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependencies[1].dstSubpass		= 1;
+	dependencies[1].dstAccessMask	= VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+	dependencies[1].dstStageMask	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	dependencies[1].dependencyFlags	= VK_DEPENDENCY_BY_REGION_BIT;
 
 	renderpassinfo.sType			= VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderpassinfo.pNext			= NULL;
@@ -236,14 +244,15 @@ bool InitScene()
 	renderpassinfo.pAttachments		= rpattachments;
 	renderpassinfo.subpassCount		= 2;
 	renderpassinfo.pSubpasses		= subpasses;
-	renderpassinfo.dependencyCount	= 1;
-	renderpassinfo.pDependencies	= &dependency;
+	renderpassinfo.dependencyCount	= VK_ARRAY_SIZE(dependencies);
+	renderpassinfo.pDependencies	= dependencies;
 
 	res = vkCreateRenderPass(driverinfo.device, &renderpassinfo, NULL, &mainrenderpass);
 	VK_ASSERT(res == VK_SUCCESS);
 
 	// load model
 	model = VulkanBasicMesh::LoadFromQM("../media/meshes/sponza/sponza.qm");
+	VK_ASSERT(model);
 
 	std::cout << "Generating tangent frame...\n";
 	model->GenerateTangentFrame();
@@ -263,8 +272,8 @@ bool InitScene()
 	idata[1] = 1;	idata[4] = 3;
 	idata[2] = 2;	idata[5] = 2;
 
-	// create uniform buffer (16 KB)
-	uniforms = VulkanBuffer::Create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT|VK_BUFFER_USAGE_TRANSFER_DST_BIT, UNIFORM_BUFFER_SIZE, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	// create uniform buffer
+	uniforms = VulkanBuffer::Create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT|VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_NUM_QUEUED_FRAMES * UNIFORM_BUFFER_SIZE, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	// create substitute textures
 	supplytexture = VulkanImage::CreateFromFile("../media/textures/vk_logo.jpg", true);
@@ -283,7 +292,7 @@ bool InitScene()
 	ambientcube = VulkanImage::CreateFromDDSCubemap("../media/textures/uffizi_diff_irrad.dds", false);
 	VK_ASSERT(ambientcube);
 
-	flaretexture = VulkanImage::CreateFromFile("../media/textures/flare1.jpg", true);
+	flaretexture = VulkanImage::CreateFromFile("../media/textures/flare1.png", true);
 	VK_ASSERT(flaretexture);
 
 	// generate particles
@@ -304,6 +313,7 @@ bool InitScene()
 		barrier.ImageLayoutTransfer(supplytexture, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		barrier.ImageLayoutTransfer(supplynormalmap, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		barrier.ImageLayoutTransfer(ambientcube, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		barrier.ImageLayoutTransfer(flaretexture, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	
 		barrier.Enlist(copycmd);
 	}
@@ -466,7 +476,7 @@ void InitializeAccumPass()
 	accumpasspipeline->SetDescriptorSetLayoutImageBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
 	accumpasspipeline->SetDescriptorSetLayoutImageBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
 	accumpasspipeline->SetDescriptorSetLayoutImageBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
-	accumpasspipeline->SetDescriptorSetLayoutImageBinding(5, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
+	accumpasspipeline->SetDescriptorSetLayoutImageBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT);
 	accumpasspipeline->SetDescriptorSetLayoutBufferBinding(6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, VK_SHADER_STAGE_COMPUTE_BIT);
 
 	VkDescriptorImageInfo imginfo1 = *gbuffernormals->GetImageInfo();
@@ -546,7 +556,7 @@ void InitializeForwardPass()
 		forwardpasspipeline->UpdateDescriptorSet(0, i);
 	}
 
-	forwardpasspipeline->SetDepth(VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL);
+	forwardpasspipeline->SetDepth(VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS);
 	forwardpasspipeline->SetViewport(0, 0, (float)screenwidth, (float)screenheight);
 	forwardpasspipeline->SetScissor(0, 0, screenwidth, screenheight);
 
@@ -693,22 +703,21 @@ void GenerateParticles()
 		float z = VKRandomFloat();
 		float v = VKRandomFloat();
 		float d = ((rand() % 2) ? 1.0f : -1.0f);
+		int c = rand() % VK_ARRAY_SIZE(colors);
 
 		x = particlevolume.Min[0] + x * (particlevolume.Max[0] - particlevolume.Min[0]);
 		y = particlevolume.Min[1] + y * (particlevolume.Max[1] - particlevolume.Min[1]);
 		z = particlevolume.Min[2] + z * (particlevolume.Max[2] - particlevolume.Min[2]);
 		v = 0.4f + v * (3.0f - 0.4f);
 
-		particles[i].color = particles[i + NUM_LIGHTS].color	= colors[rand() % VK_ARRAY_SIZE(colors)];
-		particles[i].radius = particles[i + NUM_LIGHTS].radius	= LIGHT_RADIUS;
+		for( int j = 0; j < VK_NUM_QUEUED_FRAMES; ++j ) {
+			particles[i + j * NUM_LIGHTS].color	= colors[c];
+			particles[i + j * NUM_LIGHTS].radius = LIGHT_RADIUS;
 
-		VKVec4Set(particles[i].previous, x, y, z, 1);
-		VKVec4Set(particles[i].current, x, y, z, 1);
-		VKVec3Set(particles[i].velocity, 0, v * d, 0);
-
-		VKVec4Set(particles[i + NUM_LIGHTS].previous, x, y, z, 1);
-		VKVec4Set(particles[i + NUM_LIGHTS].current, x, y, z, 1);
-		VKVec3Set(particles[i + NUM_LIGHTS].velocity, 0, v * d, 0);
+			VKVec4Set(particles[i + j * NUM_LIGHTS].previous, x, y, z, 1);
+			VKVec4Set(particles[i + j * NUM_LIGHTS].current, x, y, z, 1);
+			VKVec3Set(particles[i + j * NUM_LIGHTS].velocity, 0, v * d, 0);
+		}
 	}
 
 	lightbuffer->UnmapContents();
@@ -719,7 +728,9 @@ void GenerateParticles()
 	VkCommandBuffer copycmd = VulkanCreateTempCommandBuffer();
 	{
 		lightbuffer->UploadToVRAM(copycmd);
+
 		barrier.BufferAccessBarrier(lightbuffer->GetBuffer(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+		barrier.Enlist(copycmd);
 	}
 	VulkanSubmitTempCommandBuffer(copycmd, false);
 }
@@ -749,25 +760,16 @@ void UpdateParticles(float dt)
 		const LightParticle& oldp = readparticles[i];
 		LightParticle& newp = writeparticles[i];
 
-		newp.velocity[0] = oldp.velocity[0];
-		newp.velocity[1] = oldp.velocity[1];
-		newp.velocity[2] = oldp.velocity[2];
+		VKVec3Assign(newp.velocity, oldp.velocity);
+		VKVec3Assign(newp.previous, oldp.current);
 
 		// integrate
-		newp.previous[0] = oldp.current[0];
-		newp.previous[1] = oldp.current[1];
-		newp.previous[2] = oldp.current[2];
-
-		newp.current[0] = oldp.current[0] + oldp.velocity[0] * dt;
-		newp.current[1] = oldp.current[1] + oldp.velocity[1] * dt;
-		newp.current[2] = oldp.current[2] + oldp.velocity[2] * dt;
+		VKVec3Mad(newp.current, oldp.current, oldp.velocity, dt);
 
 		// detect collision
 		besttoi = 2;
 
-		b[0] = newp.current[0] - newp.previous[0];
-		b[1] = newp.current[1] - newp.previous[1];
-		b[2] = newp.current[2] - newp.previous[2];
+		VKVec3Subtract(b, newp.current, newp.previous);
 
 		for( int j = 0; j < 6; ++j ) {
 			// use radius == 0.5
@@ -835,9 +837,14 @@ void UpdateParticles(float dt)
 
 	VkCommandBuffer copycmd = VulkanCreateTempCommandBuffer();
 	{
-		barrier.BufferAccessBarrier(lightbuffer->GetBuffer(), VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+		barrier.BufferAccessBarrier(lightbuffer->GetBuffer(), VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, currentphysicsframe * NUM_LIGHTS, NUM_LIGHTS * sizeof(LightParticle));
+		barrier.Enlist(copycmd);
+
 		lightbuffer->UploadToVRAM(copycmd);
-		barrier.BufferAccessBarrier(lightbuffer->GetBuffer(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
+		barrier.Reset();
+		barrier.BufferAccessBarrier(lightbuffer->GetBuffer(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, currentphysicsframe * NUM_LIGHTS, NUM_LIGHTS * sizeof(LightParticle));
+		barrier.Enlist(copycmd);
 	}
 	VulkanSubmitTempCommandBuffer(copycmd, false);
 
@@ -959,6 +966,12 @@ void Render(float alpha, float elapsedtime)
 	res = vkBeginCommandBuffer(commandbuffer, &begininfo);
 	VK_ASSERT(res == VK_SUCCESS);
 
+	VulkanPipelineBarrierBatch barrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+	{
+		barrier.BufferAccessBarrier(uniforms->GetBuffer(), VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+	}
+	barrier.Enlist(commandbuffer);
+
 	vkCmdUpdateBuffer(commandbuffer, uniforms->GetBuffer(), GBUFFER_PASS_UNIFORM_OFFSET, sizeof(GBufferPassUniformData), (const uint32_t*)&gbufferpassuniforms);
 	vkCmdUpdateBuffer(commandbuffer, uniforms->GetBuffer(), ACCUM_PASS_UNIFORM_OFFSET, sizeof(AccumPassUniformData), (const uint32_t*)&accumpassuniforms);
 	vkCmdUpdateBuffer(commandbuffer, uniforms->GetBuffer(), FORWARD_PASS_UNIFORM_OFFSET, sizeof(ForwardPassUniformData), (const uint32_t*)&forwardpassuniforms);
@@ -967,8 +980,10 @@ void Render(float alpha, float elapsedtime)
 	// setup images
 	currentimage = framepump->GetNextDrawable();
 
-	VulkanPipelineBarrierBatch barrier(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+	barrier.Reset();
 	{
+		barrier.BufferAccessBarrier(uniforms->GetBuffer(), VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
 		barrier.ImageLayoutTransfer(driverinfo.swapchainimages[currentimage], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		barrier.ImageLayoutTransfer(depthbuffer->GetImage(), 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_ASPECT_DEPTH_BIT|VK_IMAGE_ASPECT_STENCIL_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		
@@ -997,7 +1012,8 @@ void Render(float alpha, float elapsedtime)
 	gbufferdepth->StoreLayout(VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	// accumulation pass
-	uint32_t lightbufferoffset = currentphysicsframe * NUM_LIGHTS * sizeof(LightParticle);
+	uint32_t prevphysicsframe = (currentphysicsframe + VK_NUM_QUEUED_FRAMES - 1) % VK_NUM_QUEUED_FRAMES;
+	uint32_t lightbufferoffset = prevphysicsframe * NUM_LIGHTS * sizeof(LightParticle);
 
 	vkCmdBindPipeline(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, accumpasspipeline->GetPipeline());
 	vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, accumpasspipeline->GetPipelineLayout(), 0, 1, accumpasspipeline->GetDescriptorSets(0), 1, &lightbufferoffset);

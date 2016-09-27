@@ -24,7 +24,7 @@
 #	define VK_ASSERT(x)	if( !(x) ) throw 1
 #endif
 
-#define VK_NUM_QUEUED_FRAMES	1 //2
+#define VK_NUM_QUEUED_FRAMES	2
 #define VK_ARRAY_SIZE(x)		(sizeof(x) / sizeof(x[0]))
 #define VK_SAFE_DELETE(x)		if( x ) { delete (x); (x) = NULL; }
 #define VK_SAFE_RELEASE(x)		if( x ) { (x)->Release(); (x) = NULL; }
@@ -615,6 +615,7 @@ public:
 	void ImageLayoutTransfer(VkImage image, VkAccessFlags srcaccess, VkAccessFlags dstaccess, VkImageAspectFlags aspectmask, VkImageLayout oldlayout, VkImageLayout newlayout);
 	void ImageLayoutTransfer(VulkanImage* image, VkAccessFlags dstaccess, VkImageAspectFlags aspectmask, VkImageLayout newlayout);
 	void Enlist(VkCommandBuffer commandbuffer);
+	void Reset();
 	void Reset(VkPipelineStageFlags srcstage, VkPipelineStageFlags dststage);
 };
 

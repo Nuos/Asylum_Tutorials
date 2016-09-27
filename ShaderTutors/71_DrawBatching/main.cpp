@@ -879,7 +879,7 @@ void Event_KeyUp(unsigned char keycode)
 				}
 			}
 
-			printf("Visible tiles: %u\n", visibletiles.size());
+			printf("Visible tiles: %llu\n", visibletiles.size());
 			printf("Visible polygons: %u\n", visiblepolys);
 			printf("Last FPS: %d\n", framerate);
 		}
@@ -1047,6 +1047,9 @@ void Render(float alpha, float elapsedtime)
 		// only valid command here
 		vkCmdExecuteCommands(commandbuffer, (uint32_t)cmds.size(), cmds.data());
 
+		// very important!
+		vkCmdNextSubpass(commandbuffer, VK_SUBPASS_CONTENTS_INLINE);
+
 		if( debugmode )
 		{
 			VulkanAABox tilebox;
@@ -1061,9 +1064,6 @@ void Render(float alpha, float elapsedtime)
 			zscale[10] = zscale[14] = 0.5f;
 
 			VKMatrixMultiply(debugworld, zscale, debugworld);
-
-			// very important!
-			vkCmdNextSubpass(commandbuffer, VK_SUBPASS_CONTENTS_INLINE);
 
 			vkCmdBindPipeline(commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, debugpipeline->GetPipeline());
 			vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, debugpipeline->GetPipelineLayout(), 0, 1, debugpipeline->GetDescriptorSets(0), 0, NULL);

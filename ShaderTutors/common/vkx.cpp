@@ -149,53 +149,7 @@ static Gdiplus::Bitmap* Win32LoadPicture(const std::wstring& file)
 		Gdiplus::GdiplusStartup(&gdiplustoken, &gdiplustartup, NULL);
 	}
 
-	HANDLE hFile = CreateFileW(
-		file.c_str(), 
-		FILE_READ_DATA,
-		FILE_SHARE_READ,
-		NULL, 
-		OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL,
-		NULL);
-
-	if( hFile == INVALID_HANDLE_VALUE )
-		return 0;
-
-	DWORD len = GetFileSize(hFile, NULL);
-	HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE|GMEM_NODISCARD, len); // leak
-
-	if( !hGlobal )
-	{
-		CloseHandle(hFile);
-		return 0;
-	}
-
-	char* lpBuffer = reinterpret_cast<char*>(GlobalLock(hGlobal));
-	DWORD dwBytesRead = 0;
-
-	while( ReadFile(hFile, lpBuffer, 4096, &dwBytesRead, NULL) )
-	{
-		lpBuffer += dwBytesRead;
-
-		if( dwBytesRead == 0 )
-			break;
-
-		dwBytesRead = 0;
-	}
-
-	CloseHandle(hFile);
-	GlobalUnlock(hGlobal);
-
-	IStream* pStream = NULL;
-
-	if( CreateStreamOnHGlobal(hGlobal, FALSE, &pStream) != S_OK )
-	{
-		GlobalFree(hGlobal);
-		return 0;
-	}
-
-	Gdiplus::Bitmap* bitmap = Gdiplus::Bitmap::FromStream(pStream);
-	pStream->Release();
+	Gdiplus::Bitmap* bitmap = Gdiplus::Bitmap::FromFile(file.c_str(), FALSE);
 
 	if( bitmap->GetLastStatus() != Gdiplus::Ok ) {
 		delete bitmap;
@@ -403,7 +357,7 @@ const VulkanMemorySubAllocator::MemoryBatch& VulkanMemorySubAllocator::FindSuita
 		allocatedsize += batches[i].totalsize;
 
 	if( allocatedsize + memreqs.size > maxsize )
-		throw std::bad_alloc("Memory heap is out of memory");
+		throw std::bad_alloc(); /* "Memory heap is out of memory" */
 
 	MemoryBatch				newbatch;
 	AllocationRecord		record;
@@ -419,7 +373,7 @@ const VulkanMemorySubAllocator::MemoryBatch& VulkanMemorySubAllocator::FindSuita
 	res = vkAllocateMemory(driverinfo.device, &allocinfo, NULL, &newbatch.memory);
 
 	if( res != VK_SUCCESS )
-		throw std::bad_alloc("Memory heap is out of memory");
+		throw std::bad_alloc(); /* "Memory heap is out of memory" */
 
 	newbatch.mappedcount	= 0;
 	newbatch.totalsize		= allocinfo.allocationSize;
@@ -548,7 +502,7 @@ VulkanRefCountable::VulkanRefCountable()
 
 VulkanRefCountable::~VulkanRefCountable()
 {
-	VK_ASSERT(refcount == 0);
+	assert(refcount == 0);
 }
 
 void VulkanRefCountable::AddRef()
@@ -1425,8 +1379,11 @@ void VulkanImage::UploadToVRAM(VkCommandBuffer commandbuffer, bool generatemips)
 	region.imageSubresource.layerCount		= (cubemap ? 6 : 1);
 	region.imageSubresource.mipLevel		= 0;
 
+	// NOTE: this is not really good here...
 	barrier.ImageLayoutTransfer(this, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	barrier.Enlist(commandbuffer);
+
+	this->StoreLayout(VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	vkCmdCopyBufferToImage(commandbuffer, stagingbuffer->GetBuffer(), image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
@@ -1451,8 +1408,8 @@ void VulkanImage::UploadToVRAM(VkCommandBuffer commandbuffer, bool generatemips)
 		blit.dstSubresource.layerCount		= (cubemap ? 6 : 1);
 
 		for( uint32_t i = 1; i < mipmapcount; ++i ) {
-			width = (extents.width >> i);
-			height = (extents.height >> i);
+			width = std::max<uint32_t>(1, extents.width >> i);
+			height = std::max<uint32_t>(1, extents.height >> i);
 
 			blit.dstOffsets[1].x = width;
 			blit.dstOffsets[1].y = height;
@@ -3094,6 +3051,12 @@ void VulkanPipelineBarrierBatch::Enlist(VkCommandBuffer commandbuffer)
 		vkCmdPipelineBarrier(commandbuffer, src, dst, 0, 0, NULL, (uint32_t)buffbarriers.size(), bbarriers, (uint32_t)imgbarriers.size(), ibarriers);
 }
 
+void VulkanPipelineBarrierBatch::Reset()
+{
+	buffbarriers.clear();
+	imgbarriers.clear();
+}
+
 void VulkanPipelineBarrierBatch::Reset(VkPipelineStageFlags srcstage, VkPipelineStageFlags dststage)
 {
 	src = srcstage;
@@ -3305,12 +3268,13 @@ void VulkanSubmitTempCommandBuffer(VkCommandBuffer commandbuffer, bool wait)
 	res = vkQueueSubmit(driverinfo.graphicsqueue, 1, &submitinfo, VK_NULL_HANDLE);
 	VK_ASSERT(res == VK_SUCCESS);
 
-	if( wait )
-	{
+	if( wait ) {
 		res = vkQueueWaitIdle(driverinfo.graphicsqueue);
 		VK_ASSERT(res == VK_SUCCESS);
 
 		vkFreeCommandBuffers(driverinfo.device, driverinfo.commandpool, 1, &commandbuffer);
+	} else {
+		// TODO: !!!
 	}
 }
 

@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include <utility>
+#include <functional>
+#include <algorithm>
 
 #define myerror(r, e, x) { if( !(x) ) { std::cout << "* MYSTL ERROR: " << e << "\n"; return r; } }
 #define mynerror(r, e, x) { if( (x) ) { std::cout << "* MYSTL ERROR: " << e << "\n"; return r; } }

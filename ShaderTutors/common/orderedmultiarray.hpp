@@ -2,7 +2,7 @@
 #ifndef _ORDEREDMULTIARRAY_HPP_
 #define _ORDEREDMULTIARRAY_HPP_
 
-#include <functional>
+#include "functional.hpp"
 
 template <typename value_type, typename compare = default_less<value_type> >
 class orderedmultiarray

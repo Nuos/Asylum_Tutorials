@@ -325,7 +325,7 @@ bool InitVK(HWND hwnd)
 	deviceinfo.enabledExtensionCount	= ARRAY_SIZE(deviceextensions);
 	deviceinfo.ppEnabledLayerNames		= instancelayers;
 	deviceinfo.ppEnabledExtensionNames	= deviceextensions;
-	deviceinfo.pEnabledFeatures			= NULL;
+	deviceinfo.pEnabledFeatures			= &driverinfo.devicefeatures;
 
 #ifdef ENABLE_VALIDATION
 	deviceinfo.enabledLayerCount		= numsupportedlayers;
@@ -474,9 +474,9 @@ void UninitVK()
 		vkDestroyDevice(driverinfo.device, 0);
 		vkDestroySurfaceKHR(driverinfo.inst, driverinfo.surface, 0);
 
-	#ifdef ENABLE_VALIDATION
+#ifdef ENABLE_VALIDATION
 		driverinfo.vkDestroyDebugReportCallbackEXT(driverinfo.inst, driverinfo.callback, 0);
-	#endif
+#endif
 
 		vkDestroyInstance(driverinfo.inst, NULL);
 	}
