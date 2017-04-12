@@ -99,6 +99,21 @@ public:
 	void CheckError();
 };
 
+static void APIENTRY ReportGLError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userdata)
+{
+	if( type >= GL_DEBUG_TYPE_ERROR && type <= GL_DEBUG_TYPE_PERFORMANCE )
+	{
+		if( source == GL_DEBUG_SOURCE_API )
+			std::cout << "GL(" << severity << "): ";
+		else if( source == GL_DEBUG_SOURCE_SHADER_COMPILER )
+			std::cout << "GLSL(" << severity << "): ";
+		else
+			std::cout << "OTHER(" << severity << "): ";
+
+		std::cout << id << ": " << message << "\n";
+	}
+}
+
 int RenderingCore::PrivateInterface::CreateContext(HDC hdc)
 {
 	if( !wglCreateContextAttribsARB )
@@ -191,6 +206,14 @@ int RenderingCore::PrivateInterface::CreateContext(HDC hdc)
 
 	context.hdc = hdc;
 	contexts.push_back(context);
+
+#ifdef _DEBUG
+	if( Quadron::qGLExtensions::ARB_debug_output )
+	{
+		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, 0, GL_TRUE);
+		glDebugMessageCallback(ReportGLError, 0);
+	}
+#endif
 
 	return (int)contexts.size() - 1;
 }
@@ -381,7 +404,7 @@ OpenGLMesh* RenderingCore::PrivateInterface::CreateMesh(const char* file)
 {
 	OpenGLMesh* mesh = 0;
 
-	if( !GLCreateMeshFromQM(file, 0, 0, &mesh) )
+	if( !GLCreateMeshFromQM(file, &mesh) )
 		mesh = 0;
 
 	return mesh;

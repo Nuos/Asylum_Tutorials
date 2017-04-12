@@ -3,6 +3,7 @@
 #define _GLEXT_H_
 
 #include <cassert>
+#include <map>
 
 #include "../extern/qglextensions.h"
 #include "orderedarray.hpp"
@@ -13,6 +14,12 @@
 #else
 #	define GL_ASSERT(x)	if( !(x) ) throw 1
 #endif
+
+#define GL_SAFE_DELETE_TEXTURE(x) \
+	if( x ) { \
+		glDeleteTextures(1, &x); \
+		x = 0; }
+// END
 
 // NOTE: you can freak out.
 
@@ -46,6 +53,8 @@ enum OpenGLDeclUsage
 enum OpenGLFormat
 {
 	GLFMT_UNKNOWN = 0,
+	GLFMT_R8,
+	GLFMT_R8G8,
 	GLFMT_R8G8B8,
 	GLFMT_A8R8G8B8,
 	GLFMT_sA8R8G8B8,
@@ -83,6 +92,27 @@ enum OpenGLMeshFlags
 	GLMESH_32BIT = 2
 };
 
+enum OpenGLTextureFlags
+{
+	GLTEX_FLIPX = 1
+};
+
+struct OpenGLCommonVertex
+{
+	float x, y, z;
+	float nx, ny, nz;
+	float u, v;
+};
+
+struct OpenGLTBNVertex
+{
+	float x, y, z;		// 0
+	float nx, ny, nz;	// 12
+	float u, v;			// 24
+	float tx, ty, tz;	// 32
+	float bx, by, bz;	// 44
+};
+
 struct OpenGLVertexElement
 {
 	GLushort	Stream;
@@ -94,7 +124,8 @@ struct OpenGLVertexElement
 
 struct OpenGLVertexDeclaration
 {
-	GLuint		Stride;
+	OpenGLVertexElement*	Elements;
+	GLuint					Stride;
 };
 
 struct OpenGLAttributeRange
@@ -105,6 +136,7 @@ struct OpenGLAttributeRange
 	GLuint		IndexCount;
 	GLuint		VertexStart;
 	GLuint		VertexCount;
+	GLboolean	Enabled;
 };
 
 struct OpenGLMaterial
@@ -114,19 +146,41 @@ struct OpenGLMaterial
 	OpenGLColor	Specular;
 	OpenGLColor	Emissive;
 	float		Power;
-	char*		TextureFile;
+	GLuint		Texture;
+	GLuint		NormalMap;
 
-	OpenGLMaterial()
-	{
-		TextureFile = 0;
-	}
-
-	~OpenGLMaterial()
-	{
-		if( TextureFile )
-			delete[] TextureFile;
-	}
+	OpenGLMaterial();
+	~OpenGLMaterial();
 };
+
+/**
+ * \brief Don't load content items more than once.
+ */
+class OpenGLContentRegistry
+{
+	typedef std::map<std::string, GLuint> TextureMap;
+
+private:
+	static OpenGLContentRegistry* _inst;
+
+	TextureMap textures;
+
+	OpenGLContentRegistry();
+	~OpenGLContentRegistry();
+
+public:
+	static OpenGLContentRegistry& Instance();
+	static void Release();
+
+	void RegisterTexture(const std::string& file, GLuint tex);
+	void UnregisterTexture(GLuint tex);
+
+	GLuint IDTexture(const std::string& file);
+};
+
+inline OpenGLContentRegistry& OpenGLContentManager() {
+	return OpenGLContentRegistry::Instance();
+}
 
 /**
  * \brief Similar to ID3DXMesh. One stream, core profile only.
@@ -134,7 +188,7 @@ struct OpenGLMaterial
 class OpenGLMesh
 {
 	friend bool GLCreateMesh(GLuint, GLuint, GLuint, OpenGLVertexElement*, OpenGLMesh**);
-	friend bool GLCreateMeshFromQM(const char*, OpenGLMaterial**, GLuint*, OpenGLMesh**);
+	friend bool GLCreateMeshFromQM(const char*, OpenGLMesh**);
 
 	struct locked_data
 	{
@@ -143,9 +197,11 @@ class OpenGLMesh
 	};
 
 private:
-	OpenGLAttributeRange*		subsettable;
-	OpenGLVertexDeclaration		vertexdecl;
 	OpenGLAABox					boundingbox;
+	OpenGLAttributeRange*		subsettable;
+	OpenGLMaterial*				materials;
+	OpenGLVertexDeclaration		vertexdecl;
+	
 	GLuint						meshoptions;
 	GLuint						numsubsets;
 	GLuint						numvertices;
@@ -160,6 +216,7 @@ private:
 	OpenGLMesh();
 
 	void Destroy();
+	void RecreateVertexLayout();
 
 public:
 	~OpenGLMesh();
@@ -167,7 +224,9 @@ public:
 	bool LockVertexBuffer(GLuint offset, GLuint size, GLuint flags, void** data);
 	bool LockIndexBuffer(GLuint offset, GLuint size, GLuint flags, void** data);
 
-	void DrawSubset(GLuint subset);
+	void DrawSubset(GLuint subset, bool bindtextures = false);
+	void EnableSubset(GLuint subset, bool enable);
+	void GenerateTangentFrame();
 	void ReorderSubsets(GLuint newindices[]);
 	void UnlockVertexBuffer();
 	void UnlockIndexBuffer();
@@ -179,6 +238,10 @@ public:
 
 	inline OpenGLAttributeRange* GetAttributeTable() {
 		return subsettable;
+	}
+
+	inline OpenGLMaterial* GetMaterialTable() {
+		return materials;
 	}
 
 	inline const OpenGLAABox& GetBoundingBox() const {
@@ -294,6 +357,7 @@ public:
 	bool AttachTexture(GLenum target, OpenGLFormat format, GLenum filter = GL_NEAREST);
 	bool Validate();
 
+	void Attach(GLenum target, GLuint tex, GLint level);
 	void Detach(GLenum target);
 	void Reattach(GLenum target, GLint level);
 	void Reattach(GLenum target, GLint face, GLint level);
@@ -339,12 +403,12 @@ public:
 };
 
 // content functions
-bool GLCreateTexture(GLsizei width, GLsizei height, GLint miplevels, OpenGLFormat format, GLuint* out);
-bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out);
+bool GLCreateTexture(GLsizei width, GLsizei height, GLint miplevels, OpenGLFormat format, GLuint* out, void* data = 0);
+bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out, GLuint flags = 0);
 bool GLCreateCubeTextureFromFile(const char* file, GLuint* out);
 bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out);
 bool GLCreateMesh(GLuint numvertices, GLuint numindices, GLuint options, OpenGLVertexElement* decl, OpenGLMesh** mesh);
-bool GLCreateMeshFromQM(const char* file, OpenGLMaterial** materials, GLuint* nummaterials, OpenGLMesh** mesh);
+bool GLCreateMeshFromQM(const char* file, OpenGLMesh** mesh);
 bool GLCreatePlane(float width, float height, float uscale, float vscale, OpenGLMesh** mesh);
 bool GLCreateBox(float width, float height, float depth, float uscale, float vscale, float wscale, OpenGLMesh** mesh);
 bool GLCreateCapsule(float length, float radius, OpenGLMesh** mesh);

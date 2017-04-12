@@ -255,7 +255,9 @@ bool InitScene()
 	VK_ASSERT(model);
 
 	std::cout << "Generating tangent frame...\n";
+
 	model->GenerateTangentFrame();
+	model->EnableSubset(4, false);
 
 	// create screenquad
 	screenquad = new VulkanBasicMesh(4, 6, sizeof(VulkanScreenVertex));
@@ -269,8 +271,8 @@ bool InitScene()
 	vdata[3].x = 1;		vdata[3].y = -1;	vdata[3].z = 0;	vdata[3].u = 1;	vdata[3].v = 0;
 
 	idata[0] = 0;	idata[3] = 1;
-	idata[1] = 1;	idata[4] = 3;
-	idata[2] = 2;	idata[5] = 2;
+	idata[1] = 2;	idata[4] = 2;
+	idata[2] = 1;	idata[5] = 3;
 
 	// create uniform buffer
 	uniforms = VulkanBuffer::Create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT|VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_NUM_QUEUED_FRAMES * UNIFORM_BUFFER_SIZE, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);

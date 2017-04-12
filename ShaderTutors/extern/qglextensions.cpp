@@ -95,6 +95,8 @@ PFNGLDELETEVERTEXARRAYSPROC					glDeleteVertexArrays = 0;
 
 PFNGLPATCHPARAMETERIPROC					glPatchParameteri = 0;
 PFNGLPATCHPARAMETERFVPROC					glPatchParameterfv = 0;
+PFNGLCLEARBUFFERFVPROC						glClearBufferfv = 0;
+PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC	glGetFramebufferAttachmentParameteriv = 0;
 
 PFNGLDISPATCHCOMPUTEPROC					glDispatchCompute = 0;
 PFNGLDISPATCHCOMPUTEINDIRECTPROC			glDispatchComputeIndirect = 0;
@@ -392,6 +394,8 @@ namespace Quadron
 			GET_ADDRESS(glMapBufferRange, PFNGLMAPBUFFERRANGEPROC, "");
 			GET_ADDRESS(glGetIntegeri_v, PFNGLGETINTEGERI_VPROC, "");
 			GET_ADDRESS(glGetProgramBinary, PFNGLGETPROGRAMBINARYPROC, "");
+			GET_ADDRESS(glClearBufferfv, PFNGLCLEARBUFFERFVPROC, "");
+			GET_ADDRESS(glGetFramebufferAttachmentParameteriv, PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC, "");
 		}
 
 		if( ARB_tessellation_shader )

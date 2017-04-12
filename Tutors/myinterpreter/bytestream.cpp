@@ -1,4 +1,4 @@
-//=============================================================================================================
+
 #include "bytestream.h"
 #include <cstring>
 
@@ -26,12 +26,12 @@ bytestream::~bytestream()
 		mydata = 0;
 	}
 }
-//=============================================================================================================
+
 void bytestream::clear()
 {
 	mysize = 0;
 }
-//=============================================================================================================
+
 void bytestream::reserve(size_t newcap)
 {
 	if( mycap >= newcap )
@@ -48,7 +48,7 @@ void bytestream::reserve(size_t newcap)
 	mydata = newdata;
 	mycap = newcap;
 }
-//=============================================================================================================
+
 void bytestream::replace(void* what, void* with, size_t size)
 {
 	size_t start = 0;
@@ -65,7 +65,7 @@ void bytestream::replace(void* what, void* with, size_t size)
 			++start;
 	}
 }
-//=============================================================================================================
+
 bytestream& bytestream::operator <<(unsigned char value)
 {
 	if( (mysize + sizeof(unsigned char)) > mycap )
@@ -76,7 +76,7 @@ bytestream& bytestream::operator <<(unsigned char value)
 
 	return *this;
 }
-//=============================================================================================================
+
 bytestream& bytestream::operator <<(int value)
 {
 	if( (mysize + sizeof(int)) > mycap )
@@ -87,7 +87,7 @@ bytestream& bytestream::operator <<(int value)
 
 	return *this;
 }
-//=============================================================================================================
+
 bytestream& bytestream::operator <<(const bytestream& other)
 {
 	if( other.mydata && other.mysize > 0 )
@@ -101,7 +101,7 @@ bytestream& bytestream::operator <<(const bytestream& other)
 
 	return *this;
 }
-//=============================================================================================================
+
 bytestream& bytestream::operator =(const bytestream& other)
 {
 	if( &other != this )
@@ -115,4 +115,3 @@ bytestream& bytestream::operator =(const bytestream& other)
 
 	return *this;
 }
-//=============================================================================================================

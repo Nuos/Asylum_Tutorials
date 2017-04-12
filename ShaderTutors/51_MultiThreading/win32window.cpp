@@ -187,6 +187,8 @@ void Win32Window::UninitOpenGL()
 	{
 		GetRenderingCore()->DeleteUniverse(glcontextid);
 		glcontextid = -1;
+
+		DestroyWindow(hwnd);
 	}
 }
 
@@ -263,6 +265,9 @@ void Win32Window::MessageHook()
 				if( msg.message == WM_QUIT )
 					break;
 			}
+
+			if( msg.message == WM_QUIT )
+				break;
 
 			if( UpdateCallback )
 				UpdateCallback(0.1f);

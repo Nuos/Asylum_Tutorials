@@ -321,7 +321,6 @@ void Window3_Render(Win32Window* window, float alpha, float elapsedtime)
 		window3renderer->SetMeshColor(OpenGLColor(1, 1, 1, 1));
 		window3renderer->SetMeshOffset(-0.75f, 0, 0);
 		window3renderer->Render(time);
-		window3renderer->Wait();
 
 		RenderTargetBlitTask* blitter = new RenderTargetBlitTask(
 			drawingitem->GetOpenGLUniverseID(), bottomlayer, feedbacklayer, RenderTargetBlitTask::Depth);

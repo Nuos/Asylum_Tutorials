@@ -109,32 +109,23 @@ bool InitScene()
 	screenquad = new OpenGLScreenQuad();
 
 	// load objects
-	OpenGLMaterial* materials = 0;
-	GLuint nummaterials = 0;
-
-	if( !GLCreateMeshFromQM("../media/meshes/cube.qm", &materials, &nummaterials, &box) )
+	if( !GLCreateMeshFromQM("../media/meshes/cube.qm", &box) )
 	{
 		MYERROR("Could not load box");
 		return false;
 	}
 
-	delete[] materials;
-
-	if( !GLCreateMeshFromQM("../media/meshes/dragon.qm", &materials, &nummaterials, &dragon) )
+	if( !GLCreateMeshFromQM("../media/meshes/dragon.qm", &dragon) )
 	{
 		MYERROR("Could not load dragon");
 		return false;
 	}
 
-	delete[] materials;
-
-	if( !GLCreateMeshFromQM("../media/meshes/happy1.qm", &materials, &nummaterials, &buddha) )
+	if( !GLCreateMeshFromQM("../media/meshes/happy1.qm", &buddha) )
 	{
 		MYERROR("Could not load buddha");
 		return false;
 	}
-
-	delete[] materials;
 
 	// create texture
 	glGenTextures(1, &white);

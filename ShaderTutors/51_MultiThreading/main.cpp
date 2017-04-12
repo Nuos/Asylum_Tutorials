@@ -143,6 +143,8 @@ int main(int argc, char* argv[])
 	worker3.Wait();
 
 	GetRenderingCore()->Shutdown();
+	GLKillAnyRogueObject();
+
 	_CrtDumpMemoryLeaks();
 
 #ifdef _DEBUG

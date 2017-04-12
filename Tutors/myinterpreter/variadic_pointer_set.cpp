@@ -1,4 +1,4 @@
-//=============================================================================================================
+
 #include "variadic_pointer_set.hpp"
 
 variadic_pointer_set::variadic_pointer_set()
@@ -9,7 +9,7 @@ variadic_pointer_set::~variadic_pointer_set()
 {
 	clear();
 }
-//=============================================================================================================
+
 void variadic_pointer_set::clear()
 {
 	for( container::iterator it = values.begin(); it != values.end(); ++it )
@@ -20,7 +20,7 @@ void variadic_pointer_set::clear()
 
 	values.clear();
 }
-//=============================================================================================================
+
 void variadic_pointer_set::erase(void* ptr)
 {
 	item<void> tmp(ptr);
@@ -35,4 +35,4 @@ void variadic_pointer_set::erase(void* ptr)
 		delete bi;
 	}
 }
-//=============================================================================================================
+

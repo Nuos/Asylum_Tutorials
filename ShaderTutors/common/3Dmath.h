@@ -209,6 +209,13 @@ struct array_state
 };
 
 template <typename T, int n>
+void array_state_set(array_state<T, n>& arr, float f1, float f2)
+{
+	arr.prev[0] = arr.curr[0] = f1;
+	arr.prev[1] = arr.curr[1] = f2;
+}
+
+template <typename T, int n>
 void array_state_set(array_state<T, n>& arr, float f1, float f2, float f3)
 {
 	arr.prev[0] = arr.curr[0] = f1;

@@ -1,4 +1,4 @@
-//=============================================================================================================
+
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
@@ -30,11 +30,11 @@ enum unary_expr
 
 struct expression_desc
 {
-	bytestream    bytecode;
+	bytestream	bytecode;
 	std::string   value;
-	int           type;
-	int           address;
-	bool          constexpr;
+	int		   type;
+	int		   address;
+	bool		  constexpr;
 
 	expression_desc()
 		: address(0), constexpr(false) {}
@@ -67,11 +67,11 @@ struct symbol_desc
 {
 	std::string  name;
 	bytestream   bytecode;
-	exprlist*    args;
+	exprlist*	args;
 
-	int          address;
-	int          type;
-	bool         isfunc;
+	int		  address;
+	int		  type;
+	bool		 isfunc;
 
 	symbol_desc()
 		: args(0), address(0), type(Type_Unknown), isfunc(false)
@@ -81,8 +81,8 @@ struct symbol_desc
 
 struct unresolved_reference
 {
-	symbol_desc* func;  // if function call
-	int offset;         // relative offset to jump
+	symbol_desc* func;	// if function call
+	int offset;			// relative offset to jump
 
 	unresolved_reference()
 		: func(0), offset(0) {}
@@ -94,4 +94,4 @@ typedef std::map<std::string, symbol_desc*> symboltable;
 typedef std::vector<symboltable> scopetable;
 
 #endif
-//=============================================================================================================
+

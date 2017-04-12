@@ -15,9 +15,11 @@
 
 ULONG_PTR gdiplustoken = 0;
 
-GLint map_Format_Internal[14] =
+GLint map_Format_Internal[] =
 {
 	0,
+	GL_R8,
+	GL_RG8,
 	GL_RGB8,
 	GL_RGBA8,
 	GL_SRGB8_ALPHA8,
@@ -33,9 +35,11 @@ GLint map_Format_Internal[14] =
 	GL_RGBA32F_ARB
 };
 
-GLenum map_Format_Format[14] =
+GLenum map_Format_Format[] =
 {
 	0,
+	GL_RED,
+	GL_RG,
 	GL_RGB,
 	GL_RGBA,
 	GL_RGBA,
@@ -51,9 +55,11 @@ GLenum map_Format_Format[14] =
 	GL_RGBA
 };
 
-GLenum map_Format_Type[14] =
+GLenum map_Format_Type[] =
 {
 	0,
+	GL_UNSIGNED_BYTE,
+	GL_UNSIGNED_BYTE,
 	GL_UNSIGNED_BYTE,
 	GL_UNSIGNED_INT_8_8_8_8_REV,
 	GL_UNSIGNED_BYTE,
@@ -102,11 +108,162 @@ static Gdiplus::Bitmap* Win32LoadPicture(const std::wstring& file)
 	return bitmap;
 }
 
+OpenGLMaterial::OpenGLMaterial()
+{
+	Texture = 0;
+	NormalMap = 0;
+}
+
+OpenGLMaterial::~OpenGLMaterial()
+{
+	if( Texture != 0 )
+		glDeleteTextures(1, &Texture);
+
+	if( NormalMap != 0 )
+		glDeleteTextures(1, &NormalMap);
+
+	OpenGLContentManager().UnregisterTexture(Texture);
+	OpenGLContentManager().UnregisterTexture(NormalMap);
+}
+
+//*************************************************************************************************************
+//
+// OpenGLContentRegistry impl
+//
+//*************************************************************************************************************
+
+OpenGLContentRegistry* OpenGLContentRegistry::_inst = 0;
+
+OpenGLContentRegistry& OpenGLContentRegistry::Instance()
+{
+	if( !_inst )
+		_inst = new OpenGLContentRegistry();
+
+	return *_inst;
+}
+
+void OpenGLContentRegistry::Release()
+{
+	if( _inst )
+		delete _inst;
+
+	_inst = 0;
+}
+
+OpenGLContentRegistry::OpenGLContentRegistry()
+{
+}
+
+OpenGLContentRegistry::~OpenGLContentRegistry()
+{
+}
+
+void OpenGLContentRegistry::RegisterTexture(const std::string& file, GLuint tex)
+{
+	std::string name;
+	GLGetFile(name, file);
+
+	GL_ASSERT(textures.count(name) == 0);
+
+	if( tex != 0 )
+		textures.insert(TextureMap::value_type(name, tex));
+}
+
+void OpenGLContentRegistry::UnregisterTexture(GLuint tex)
+{
+	for( TextureMap::iterator it = textures.begin(); it != textures.end(); ++it ) {
+		if( it->second == tex ) {
+			textures.erase(it);
+			break;
+		}
+	}
+}
+
+GLuint OpenGLContentRegistry::IDTexture(const std::string& file)
+{
+	std::string name;
+	GLGetFile(name, file);
+
+	TextureMap::iterator it = textures.find(name);
+
+	if( it == textures.end() )
+		return 0;
+
+	return it->second;
+}
+
 // *****************************************************************************************************************************
 //
 // OpenGLMesh impl
 //
 // *****************************************************************************************************************************
+
+static void AccumulateTangentFrame(OpenGLTBNVertex* vdata, uint32_t i1, uint32_t i2, uint32_t i3)
+{
+	OpenGLTBNVertex* v1 = (vdata + i1);
+	OpenGLTBNVertex* v2 = (vdata + i2);
+	OpenGLTBNVertex* v3 = (vdata + i3);
+
+	float a[3], b[3], c[3], t[3];
+
+	a[0] = v2->x - v1->x;
+	a[1] = v2->y - v1->y;
+	a[2] = v2->z - v1->z;
+
+	c[0] = v3->x - v1->x;
+	c[1] = v3->y - v1->y;
+	c[2] = v3->z - v1->z;
+
+	float s1 = v2->u - v1->u;
+	float s2 = v3->u - v1->u;
+	float t1 = v2->v - v1->v;
+	float t2 = v3->v - v1->v;
+
+	float invdet = 1.0f / ((s1 * t2 - s2 * t1) + 0.0001f);
+
+	t[0] = (t2 * a[0] - t1 * c[0]) * invdet;
+	t[1] = (t2 * a[1] - t1 * c[1]) * invdet;
+	t[2] = (t2 * a[2] - t1 * c[2]) * invdet;
+
+	b[0] = (s1 * c[0] - s2 * a[0]) * invdet;
+	b[1] = (s1 * c[1] - s2 * a[1]) * invdet;
+	b[2] = (s1 * c[2] - s2 * a[2]) * invdet;
+
+	v1->tx += t[0];	v2->tx += t[0];	v3->tx += t[0];
+	v1->ty += t[1];	v2->ty += t[1];	v3->ty += t[1];
+	v1->tz += t[2];	v2->tz += t[2];	v3->tz += t[2];
+
+	v1->bx += b[0];	v2->bx += b[0];	v3->bx += b[0];
+	v1->by += b[1];	v2->by += b[1];	v3->by += b[1];
+	v1->bz += b[2];	v2->bz += b[2];	v3->bz += b[2];
+}
+
+static void OrthogonalizeTangentFrame(OpenGLTBNVertex& vert)
+{
+	float t[3], b[3], q[3];
+
+	bool tangentinvalid = (GLVec3Dot(&vert.tx, &vert.tx) < 1e-6f);
+	bool bitangentinvalid = (GLVec3Dot(&vert.bx, &vert.bx) < 1e-6f);
+
+	if( tangentinvalid && bitangentinvalid ) {
+		// TODO:
+	} else if( tangentinvalid ) {
+		GLVec3Cross(&vert.tx, &vert.bx, &vert.nx);
+	} else if( bitangentinvalid ) {
+		GLVec3Cross(&vert.bx, &vert.nx, &vert.tx);
+	}
+
+	GLVec3Scale(t, &vert.nx, GLVec3Dot(&vert.nx, &vert.tx));
+	GLVec3Subtract(t, &vert.tx, t);
+
+	GLVec3Scale(q, t, (GLVec3Dot(t, &vert.bx) / GLVec3Dot(&vert.tx, &vert.tx)));
+	GLVec3Scale(b, &vert.nx, GLVec3Dot(&vert.nx, &vert.bx));
+	GLVec3Subtract(b, &vert.bx, b);
+	GLVec3Subtract(b, b, q);
+
+	GLVec3Normalize(&vert.tx, t);
+	GLVec3Normalize(&vert.bx, b);
+}
 
 OpenGLMesh::OpenGLMesh()
 {
@@ -114,10 +271,14 @@ OpenGLMesh::OpenGLMesh()
 	numvertices		= 0;
 	numindices		= 0;
 	subsettable		= 0;
+	materials		= 0;
 	vertexbuffer	= 0;
 	indexbuffer		= 0;
 	vertexlayout	= 0;
 	meshoptions		= 0;
+
+	vertexdecl.Elements = 0;
+	vertexdecl.Stride = 0;
 
 	vertexdata_locked.ptr = 0;
 	indexdata_locked.ptr = 0;
@@ -130,6 +291,8 @@ OpenGLMesh::~OpenGLMesh()
 
 void OpenGLMesh::Destroy()
 {
+	delete[] vertexdecl.Elements;
+
 	if( vertexbuffer )
 	{
 		glDeleteBuffers(1, &vertexbuffer);
@@ -154,7 +317,88 @@ void OpenGLMesh::Destroy()
 		subsettable = 0;
 	}
 
+	delete[] materials;
 	numsubsets = 0;
+}
+
+void OpenGLMesh::RecreateVertexLayout()
+{
+	if( vertexlayout )
+		glDeleteVertexArrays(1, &vertexlayout);
+
+	glGenVertexArrays(1, &vertexlayout);
+	vertexdecl.Stride = 0;
+
+	// calculate stride
+	for( int i = 0; i < 16; ++i ) {
+		OpenGLVertexElement& elem = vertexdecl.Elements[i];
+
+		if( elem.Stream == 0xff )
+			break;
+
+		switch( elem.Type )
+		{
+		case GLDECLTYPE_GLCOLOR:
+		case GLDECLTYPE_FLOAT1:		vertexdecl.Stride += 4;		break;
+		case GLDECLTYPE_FLOAT2:		vertexdecl.Stride += 8;		break;
+		case GLDECLTYPE_FLOAT3:		vertexdecl.Stride += 12;	break;
+		case GLDECLTYPE_FLOAT4:		vertexdecl.Stride += 16;	break;
+
+		default:
+			break;
+		}
+	}
+
+	glBindVertexArray(vertexlayout);
+	{
+		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
+
+		// bind locations
+		for( int i = 0; i < 16; ++i ) {
+			OpenGLVertexElement& elem = vertexdecl.Elements[i];
+
+			if( elem.Stream == 0xff )
+				break;
+
+			glEnableVertexAttribArray(elem.Usage);
+
+			switch( elem.Usage )
+			{
+			case GLDECLUSAGE_POSITION:
+				glVertexAttribPointer(elem.Usage, (elem.Type == GLDECLTYPE_FLOAT4 ? 4 : 3), GL_FLOAT, GL_FALSE, vertexdecl.Stride, (const GLvoid*)elem.Offset);
+				break;
+
+			case GLDECLUSAGE_COLOR:
+				glVertexAttribPointer(elem.Usage, 4, GL_UNSIGNED_BYTE, GL_TRUE, vertexdecl.Stride, (const GLvoid*)elem.Offset);
+				break;
+
+			case GLDECLUSAGE_NORMAL:
+				glVertexAttribPointer(elem.Usage, (elem.Type == GLDECLTYPE_FLOAT4 ? 4 : 3), GL_FLOAT, GL_FALSE, vertexdecl.Stride, (const GLvoid*)elem.Offset);
+				break;
+
+			case GLDECLUSAGE_TEXCOORD:
+				// haaack...
+				glVertexAttribPointer(elem.Usage + elem.UsageIndex, (elem.Type + 1), GL_FLOAT, GL_FALSE, vertexdecl.Stride, (const GLvoid*)elem.Offset);
+				break;
+
+			case GLDECLUSAGE_TANGENT:
+				glVertexAttribPointer(elem.Usage, 3, GL_FLOAT, GL_FALSE, vertexdecl.Stride, (const GLvoid*)elem.Offset);
+				break;
+
+			case GLDECLUSAGE_BINORMAL:
+				glVertexAttribPointer(elem.Usage, 3, GL_FLOAT, GL_FALSE, vertexdecl.Stride, (const GLvoid*)elem.Offset);
+				break;
+
+			// TODO:
+
+			default:
+				std::cout << "Unhandled layout element...\n";
+				break;
+			}
+		}
+	}
+	glBindVertexArray(0);
 }
 
 bool OpenGLMesh::LockVertexBuffer(GLuint offset, GLuint size, GLuint flags, void** data)
@@ -172,6 +416,7 @@ bool OpenGLMesh::LockVertexBuffer(GLuint offset, GLuint size, GLuint flags, void
 		flags = GL_MAP_READ_BIT|GL_MAP_WRITE_BIT;
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+
 	vertexdata_locked.ptr = glMapBufferRange(GL_ARRAY_BUFFER, offset, size, flags);
 	vertexdata_locked.flags = flags;
 
@@ -199,6 +444,7 @@ bool OpenGLMesh::LockIndexBuffer(GLuint offset, GLuint size, GLuint flags, void*
 		flags = GL_MAP_READ_BIT|GL_MAP_WRITE_BIT;
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
+
 	indexdata_locked.ptr = glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, offset, size, flags);
 	indexdata_locked.flags = flags;
 
@@ -209,7 +455,7 @@ bool OpenGLMesh::LockIndexBuffer(GLuint offset, GLuint size, GLuint flags, void*
 	return true;
 }
 
-void OpenGLMesh::DrawSubset(GLuint subset)
+void OpenGLMesh::DrawSubset(GLuint subset, bool bindtextures)
 {
 	if( vertexlayout == 0 || numvertices == 0 )
 		return;
@@ -217,8 +463,28 @@ void OpenGLMesh::DrawSubset(GLuint subset)
 	if( subsettable && subset < numsubsets )
 	{
 		const OpenGLAttributeRange& attr = subsettable[subset];
+		const OpenGLMaterial& mat = materials[subset];
+
+		if( !attr.Enabled )
+			return;
+
 		GLenum itype = (meshoptions & GLMESH_32BIT) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
 		GLuint start = attr.IndexStart * ((meshoptions & GLMESH_32BIT) ? 4 : 2);
+
+		if( bindtextures )
+		{
+			if( mat.Texture )
+			{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, mat.Texture);
+			}
+
+			if( mat.NormalMap )
+			{
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, mat.NormalMap);
+			}
+		}
 
 		glBindVertexArray(vertexlayout);
 
@@ -232,6 +498,112 @@ void OpenGLMesh::DrawSubset(GLuint subset)
 				glDrawRangeElements(attr.PrimitiveType, attr.VertexStart, attr.VertexStart + attr.VertexCount - 1, attr.IndexCount, itype, (char*)0 + start);
 		}
 	}
+}
+
+void OpenGLMesh::EnableSubset(GLuint subset, bool enable)
+{
+	if( subsettable && subset < numsubsets )
+		subsettable[subset].Enabled = enable;
+}
+
+void OpenGLMesh::GenerateTangentFrame()
+{
+	GL_ASSERT(vertexdecl.Stride == sizeof(OpenGLCommonVertex));
+	GL_ASSERT(vertexbuffer != 0);
+	GL_ASSERT((meshoptions & GLMESH_32BIT) == GLMESH_32BIT);
+
+	OpenGLCommonVertex*	oldvdata	= 0;
+	OpenGLTBNVertex*	newvdata	= 0;
+	uint32_t*			idata		= 0;
+	GLuint				newbuffer	= 0;
+	uint32_t			i1, i2, i3;
+
+	GL_ASSERT(LockVertexBuffer(0, 0, GLLOCK_READONLY, (void**)&oldvdata));
+	GL_ASSERT(LockIndexBuffer(0, 0, GLLOCK_READONLY, (void**)&idata));
+
+	newvdata = new OpenGLTBNVertex[numvertices];
+
+	for( GLuint i = 0; i < numsubsets; ++i ) {
+		const OpenGLAttributeRange& subset = subsettable[i];
+		GL_ASSERT(subset.IndexCount > 0);
+
+		OpenGLCommonVertex*	oldsubsetdata	= (oldvdata + subset.VertexStart);
+		OpenGLTBNVertex*	newsubsetdata	= (newvdata + subset.VertexStart);
+		uint32_t*			subsetidata		= (idata + subset.IndexStart);
+
+		// initialize new data
+		for( uint32_t j = 0; j < subset.VertexCount; ++j ) {
+			OpenGLCommonVertex& oldvert = oldsubsetdata[j];
+			OpenGLTBNVertex& newvert = newsubsetdata[j];
+
+			GLVec3Assign(&newvert.x, &oldvert.x);
+			GLVec3Assign(&newvert.nx, &oldvert.nx);
+			
+			newvert.u = oldvert.u;
+			newvert.v = oldvert.v;
+
+			GLVec3Set(&newvert.tx, 0, 0, 0);
+			GLVec3Set(&newvert.bx, 0, 0, 0);
+		}
+
+		for( uint32_t j = 0; j < subset.IndexCount; j += 3 ) {
+			i1 = *(subsetidata + j + 0) - subset.VertexStart;
+			i2 = *(subsetidata + j + 1) - subset.VertexStart;
+			i3 = *(subsetidata + j + 2) - subset.VertexStart;
+
+			AccumulateTangentFrame(newsubsetdata, i1, i2, i3);
+		}
+
+		for( uint32_t j = 0; j < subset.VertexCount; ++j ) {
+			OrthogonalizeTangentFrame(newsubsetdata[j]);
+		}
+	}
+
+	UnlockIndexBuffer();
+	UnlockVertexBuffer();
+
+	glDeleteBuffers(1, &vertexbuffer);
+	glGenBuffers(1, &vertexbuffer);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glBufferData(GL_ARRAY_BUFFER, numvertices * sizeof(OpenGLTBNVertex), newvdata, ((meshoptions & GLMESH_DYNAMIC) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW));
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	delete[] newvdata;
+
+	OpenGLVertexElement* olddecl = vertexdecl.Elements;
+	int numdeclelems = 0;
+
+	for (size_t i = 0; i < 16; ++i) {
+		const OpenGLVertexElement& elem = vertexdecl.Elements[i];
+
+		if (elem.Stream == 0xff)
+			break;
+
+		++numdeclelems;
+	}
+
+	vertexdecl.Elements = new OpenGLVertexElement[numdeclelems + 3];
+	memcpy (vertexdecl.Elements, olddecl, numdeclelems * sizeof(OpenGLVertexElement));
+
+	vertexdecl.Elements[numdeclelems + 0].Stream = 0;
+	vertexdecl.Elements[numdeclelems + 0].Offset = 32;
+	vertexdecl.Elements[numdeclelems + 0].Type = GLDECLTYPE_FLOAT3;
+	vertexdecl.Elements[numdeclelems + 0].Usage = GLDECLUSAGE_TANGENT;
+	vertexdecl.Elements[numdeclelems + 0].UsageIndex = 0;
+
+	vertexdecl.Elements[numdeclelems + 1].Stream = 0;
+	vertexdecl.Elements[numdeclelems + 1].Offset = 44;
+	vertexdecl.Elements[numdeclelems + 1].Type = GLDECLTYPE_FLOAT3;
+	vertexdecl.Elements[numdeclelems + 1].Usage = GLDECLUSAGE_BINORMAL;
+	vertexdecl.Elements[numdeclelems + 1].UsageIndex = 0;
+
+	vertexdecl.Elements[numdeclelems + 2].Stream = 0xff;
+
+	delete[] olddecl;
+	RecreateVertexLayout();
+
+	GL_ASSERT(vertexdecl.Stride == sizeof(OpenGLTBNVertex));
 }
 
 void OpenGLMesh::ReorderSubsets(GLuint newindices[])
@@ -848,6 +1220,25 @@ bool OpenGLFramebuffer::Validate()
 	return (status == GL_FRAMEBUFFER_COMPLETE);
 }
 
+void OpenGLFramebuffer::Attach(GLenum target, GLuint tex, GLint level)
+{
+	Attachment* attach = 0;
+
+	if( target == GL_DEPTH_ATTACHMENT || target == GL_DEPTH_STENCIL_ATTACHMENT )
+		attach = &depthstencil;
+	else
+		attach = &rendertargets[target - GL_COLOR_ATTACHMENT0];
+
+	if( attach->id == tex )
+		return;
+
+	attach->type = 1;
+	attach->id = tex;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, fboid);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, target, GL_TEXTURE_2D, attach->id, level);
+}
+
 void OpenGLFramebuffer::Detach(GLenum target)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, fboid);
@@ -905,7 +1296,7 @@ void OpenGLFramebuffer::Set()
 		if( rendertargets[i].id != 0 )
 		{
 			buffs[i] = GL_COLOR_ATTACHMENT0 + i;
-			count = i;
+			count = (i + 1);
 		}
 		else
 			buffs[i] = GL_NONE;
@@ -914,7 +1305,7 @@ void OpenGLFramebuffer::Set()
 	glBindFramebuffer(GL_FRAMEBUFFER, fboid);
 
 	if( count > 0 )
-		glDrawBuffers(count + 1, buffs);
+		glDrawBuffers(count, buffs);
 
 	glViewport(0, 0, sizex, sizey);
 }
@@ -993,10 +1384,17 @@ void OpenGLScreenQuad::Draw()
 bool GLCreateMesh(GLuint numvertices, GLuint numindices, GLuint options, OpenGLVertexElement* decl, OpenGLMesh** mesh)
 {
 	OpenGLMesh* glmesh = new OpenGLMesh();
+	int numdeclelems = 0;
+
+	for( int i = 0; i < 16; ++i ) {
+		++numdeclelems;
+
+		if( decl[i].Stream == 0xff )
+			break;
+	}
 
 	glGenBuffers(1, &glmesh->vertexbuffer);
 	glGenBuffers(1, &glmesh->indexbuffer);
-	glGenVertexArrays(1, &glmesh->vertexlayout);
 
 	if( numvertices >= 0xffff )
 		options |= GLMESH_32BIT;
@@ -1013,84 +1411,24 @@ bool GLCreateMesh(GLuint numvertices, GLuint numindices, GLuint options, OpenGLV
 	glmesh->subsettable->PrimitiveType	= GLPT_TRIANGLELIST;
 	glmesh->subsettable->VertexCount	= 0;	// draw entire buffer
 	glmesh->subsettable->VertexStart	= 0;
+	glmesh->subsettable->Enabled		= GL_TRUE;
 
-	glmesh->vertexdecl.Stride = 0;
+	glmesh->vertexdecl.Elements = new OpenGLVertexElement[numdeclelems];
+	memcpy(glmesh->vertexdecl.Elements, decl, numdeclelems * sizeof(OpenGLVertexElement));
 
-	// calculate stride
-	for( int i = 0; i < 16; ++i )
-	{
-		OpenGLVertexElement& elem = decl[i];
-
-		if( elem.Stream == 0xff )
-			break;
-
-		switch( elem.Type )
-		{
-		case GLDECLTYPE_GLCOLOR:
-		case GLDECLTYPE_FLOAT1:		glmesh->vertexdecl.Stride += 4;		break;
-		case GLDECLTYPE_FLOAT2:		glmesh->vertexdecl.Stride += 8;		break;
-		case GLDECLTYPE_FLOAT3:		glmesh->vertexdecl.Stride += 12;	break;
-		case GLDECLTYPE_FLOAT4:		glmesh->vertexdecl.Stride += 16;	break;
-
-		default:
-			break;
-		}
-	}
+	// create vertex layout
+	glmesh->RecreateVertexLayout();
+	GL_ASSERT(glmesh->vertexdecl.Stride != 0);
 
 	// allocate storage
+	glBindBuffer(GL_ARRAY_BUFFER, glmesh->vertexbuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glmesh->indexbuffer);
+
 	GLenum usage = ((options & GLMESH_DYNAMIC) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
 	GLuint istride = ((options & GLMESH_32BIT) ? 4 : 2);
 
-	glBindBuffer(GL_ARRAY_BUFFER, glmesh->vertexbuffer);
 	glBufferData(GL_ARRAY_BUFFER, numvertices * glmesh->vertexdecl.Stride, 0, usage);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glmesh->indexbuffer);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, numindices * istride, 0, usage);
-
-	// create vertex layout
-	glBindVertexArray(glmesh->vertexlayout);
-	{
-		glBindBuffer(GL_ARRAY_BUFFER, glmesh->vertexbuffer);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glmesh->indexbuffer);
-
-		// bind locations
-		for( int i = 0; i < 16; ++i )
-		{
-			OpenGLVertexElement& elem = decl[i];
-
-			if( elem.Stream == 0xff )
-				break;
-
-			glEnableVertexAttribArray(elem.Usage);
-
-			switch( elem.Usage )
-			{
-			case GLDECLUSAGE_POSITION:
-				glVertexAttribPointer(elem.Usage, (elem.Type == GLDECLTYPE_FLOAT4 ? 4 : 3), GL_FLOAT, GL_FALSE, glmesh->vertexdecl.Stride, (const GLvoid*)elem.Offset);
-				break;
-
-			case GLDECLUSAGE_COLOR:
-				glVertexAttribPointer(elem.Usage, 4, GL_UNSIGNED_BYTE, GL_TRUE, glmesh->vertexdecl.Stride, (const GLvoid*)elem.Offset);
-				break;
-
-			case GLDECLUSAGE_NORMAL:
-				glVertexAttribPointer(elem.Usage, (elem.Type == GLDECLTYPE_FLOAT4 ? 4 : 3), GL_FLOAT, GL_FALSE, glmesh->vertexdecl.Stride, (const GLvoid*)elem.Offset);
-				break;
-
-			case GLDECLUSAGE_TEXCOORD:
-				// haaack...
-				glVertexAttribPointer(elem.Usage + elem.UsageIndex, (elem.Type + 1), GL_FLOAT, GL_FALSE, glmesh->vertexdecl.Stride, (const GLvoid*)elem.Offset);
-				break;
-
-			// TODO:
-
-			default:
-				std::cout << "Unhandled layout element...\n";
-				break;
-			}
-		}
-	}
-	glBindVertexArray(0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -1099,7 +1437,7 @@ bool GLCreateMesh(GLuint numvertices, GLuint numindices, GLuint options, OpenGLV
 	return true;
 }
 
-bool GLCreateMeshFromQM(const char* file, OpenGLMaterial** materials, GLuint* nummaterials, OpenGLMesh** mesh)
+bool GLCreateMeshFromQM(const char* file, OpenGLMesh** mesh)
 {
 	static const unsigned char usages[] =
 	{
@@ -1129,10 +1467,10 @@ bool GLCreateMeshFromQM(const char* file, OpenGLMaterial** materials, GLuint* nu
 	OpenGLAABox				box;
 	OpenGLVertexElement*	decl;
 	OpenGLAttributeRange*	table;
-	OpenGLMaterial			defmat;
 	OpenGLMaterial*			mat;
 	OpenGLColor				color;
 
+	std::string				basedir(file);
 	std::string				str;
 	FILE*					infile = 0;
 	float					bbmin[3];
@@ -1147,7 +1485,7 @@ bool GLCreateMeshFromQM(const char* file, OpenGLMaterial** materials, GLuint* nu
 	unsigned int			numelems;
 	unsigned short			tmp16;
 	unsigned char			tmp8;
-	void*					data;
+	void*					data = 0;
 	char					buff[256];
 	bool					success;
 
@@ -1159,6 +1497,8 @@ bool GLCreateMeshFromQM(const char* file, OpenGLMaterial** materials, GLuint* nu
 
 	if( !infile )
 		return false;
+
+	basedir = basedir.substr(0, basedir.find_last_of('/') + 1);
 
 	fread(&unused, 4, 1, infile);
 	fread(&numindices, 4, 1, infile);
@@ -1227,22 +1567,16 @@ bool GLCreateMeshFromQM(const char* file, OpenGLMaterial** materials, GLuint* nu
 	}
 
 	// attribute table
-	if( materials )
-		(*materials) = new OpenGLMaterial[numsubsets];
+	(*mesh)->materials = new OpenGLMaterial[numsubsets];
 
 	for( unsigned int i = 0; i < numsubsets; ++i )
 	{
 		OpenGLAttributeRange& subset = table[i];
-
-		if( materials )
-			mat = ((*materials) + i);
-		else
-			mat = &defmat;
-
-		mat->TextureFile = 0;
+		mat = ((*mesh)->materials + i);
 
 		subset.AttribId = i;
 		subset.PrimitiveType = GLPT_TRIANGLELIST;
+		subset.Enabled = GL_TRUE;
 
 		fread(&subset.IndexStart, 4, 1, infile);
 		fread(&subset.VertexStart, 4, 1, infile);
@@ -1288,17 +1622,18 @@ bool GLCreateMeshFromQM(const char* file, OpenGLMaterial** materials, GLuint* nu
 
 			if( buff[1] != ',' )
 			{
-				unused = strlen(buff);
-
-				if( materials )
-				{
-					mat->TextureFile = new char[unused + 1];
-					memcpy(mat->TextureFile, buff, unused);
-					mat->TextureFile[unused] = 0;
-				}
+				str = basedir + buff;
+				GLCreateTextureFromFile(str.c_str(), true, &mat->Texture);
 			}
 
 			GLReadString(infile, buff);
+
+			if( buff[1] != ',' )
+			{
+				str = basedir + buff;
+				GLCreateTextureFromFile(str.c_str(), false, &mat->NormalMap);
+			}
+
 			GLReadString(infile, buff);
 			GLReadString(infile, buff);
 			GLReadString(infile, buff);
@@ -1321,15 +1656,13 @@ bool GLCreateMeshFromQM(const char* file, OpenGLMaterial** materials, GLuint* nu
 			mat->Power = 80.0f;
 		}
 
+		// texture info
 		GLReadString(infile, buff);
 
-		if( buff[1] != ',' && mat->TextureFile == 0 )
+		if( buff[1] != ',' && mat->Texture == 0 )
 		{
-			unused = strlen(buff);
-
-			mat->TextureFile = new char[unused + 1];
-			memcpy(mat->TextureFile, buff, unused);
-			mat->TextureFile[unused] = 0;
+			str = basedir + buff;
+			GLCreateTextureFromFile(str.c_str(), true, &mat->Texture);
 		}
 
 		GLReadString(infile, buff);
@@ -1341,11 +1674,11 @@ bool GLCreateMeshFromQM(const char* file, OpenGLMaterial** materials, GLuint* nu
 		GLReadString(infile, buff);
 	}
 
+	if( istride == 4 )
+		(*mesh)->meshoptions |= GLMESH_32BIT;
+
 	// attribute buffer
 	(*mesh)->SetAttributeTable(table, numsubsets);
-
-	if( nummaterials )
-		*nummaterials = numsubsets;
 
 	// printf some info
 	GLGetFile(str, file);
@@ -1962,7 +2295,7 @@ bool GLCreateTessellationProgramFromFile(
 	return true;
 }
 
-bool GLCreateTexture(GLsizei width, GLsizei height, GLint miplevels, OpenGLFormat format, GLuint* out)
+bool GLCreateTexture(GLsizei width, GLsizei height, GLint miplevels, OpenGLFormat format, GLuint* out, void* data)
 {
 	GLuint texid = 0;
 
@@ -1980,7 +2313,7 @@ bool GLCreateTexture(GLsizei width, GLsizei height, GLint miplevels, OpenGLForma
 
 	glTexImage2D(
 		GL_TEXTURE_2D, 0, map_Format_Internal[format], width, height, 0,
-		map_Format_Format[format], map_Format_Type[format], 0);
+		map_Format_Format[format], map_Format_Type[format], data);
 
 	if( miplevels != 1 )
 		glGenerateMipmap(GL_TEXTURE_2D);
@@ -1992,7 +2325,14 @@ bool GLCreateTexture(GLsizei width, GLsizei height, GLint miplevels, OpenGLForma
 static bool GLCreateTextureFromDDS(const char* file, GLuint* out)
 {
 	DDS_Image_Info info;
-	GLuint texid = 0;
+	GLuint texid = OpenGLContentManager().IDTexture(file);
+
+	if( texid != 0 ) {
+		printf("Pointer %s\n", file);
+		*out = texid;
+
+		return true;
+	}
 
 	if( !LoadFromDDS(file, &info) )
 	{
@@ -2066,18 +2406,28 @@ static bool GLCreateTextureFromDDS(const char* file, GLuint* out)
 		glDeleteTextures(1, &texid);
 		texid = 0;
 
-		std::cout << "Error: Could not create texture!";
+		std::cout << "Error: Could not create texture!\n";
 	}
 	else
 		std::cout << "Created texture " << info.Width << "x" << info.Height << "\n";
 
 	*out = texid;
+	OpenGLContentManager().RegisterTexture(file, texid);
+
 	return (texid != 0);
 }
 
-bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out)
+bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out, GLuint flags)
 {
 	std::string ext;
+	GLuint texid = OpenGLContentManager().IDTexture(file);
+
+	if( texid != 0 ) {
+		printf("Pointer %s\n", file);
+		*out = texid;
+
+		return true;
+	}
 
 	GLGetExtension(ext, file);
 
@@ -2091,7 +2441,6 @@ bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out)
 	wstr.resize(size);
 	MultiByteToWideChar(CP_UTF8, 0, file, length, &wstr[0], size);
 
-	GLuint texid = 0;
 	Gdiplus::Bitmap* bitmap = Win32LoadPicture(wstr);
 
 	if( bitmap )
@@ -2116,12 +2465,15 @@ bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out)
 				}
 
 				// flip on X
-				for( UINT j = 0; j < data.Width / 2; ++j )
+				if( flags & GLTEX_FLIPX )
 				{
-					UINT index1 = (i * data.Width + j) * 4;
-					UINT index2 = (i * data.Width + (data.Width - j - 1)) * 4;
+					for( UINT j = 0; j < data.Width / 2; ++j )
+					{
+						UINT index1 = (i * data.Width + j) * 4;
+						UINT index2 = (i * data.Width + (data.Width - j - 1)) * 4;
 
-					std::swap<unsigned int>(*((unsigned int*)(tmpbuff + index1)), *((unsigned int*)(tmpbuff + index2)));
+						std::swap<unsigned int>(*((unsigned int*)(tmpbuff + index1)), *((unsigned int*)(tmpbuff + index2)));
+					}
 				}
 			}
 
@@ -2147,7 +2499,7 @@ bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out)
 				glDeleteTextures(1, &texid);
 				texid = 0;
 
-				std::cout << "Error: Could not create texture!";
+				std::cout << "Error: Could not create texture!\n";
 			}
 			else
 				std::cout << "Created texture " << data.Width << "x" << data.Height << "\n";
@@ -2159,16 +2511,25 @@ bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out)
 		delete bitmap;
 	}
 	else
-		std::cout << "Error: Could not load bitmap!";
+		std::cout << "Error: Could not load bitmap!\n";
 
 	*out = texid;
+	OpenGLContentManager().RegisterTexture(file, texid);
+
 	return (texid != 0);
 }
 
 bool GLCreateCubeTextureFromFile(const char* file, GLuint* out)
 {
 	DDS_Image_Info info;
-	GLuint texid = 0;
+	GLuint texid = OpenGLContentManager().IDTexture(file);
+
+	if( texid != 0 ) {
+		printf("Pointer %s\n", file);
+		*out = texid;
+
+		return true;
+	}
 
 	if( !LoadFromDDS(file, &info) )
 	{
@@ -2246,12 +2607,14 @@ bool GLCreateCubeTextureFromFile(const char* file, GLuint* out)
 		glDeleteTextures(1, &texid);
 		texid = 0;
 
-		std::cout << "Error: Could not create texture!";
+		std::cout << "Error: Could not create texture!\n";
 	}
 	else
 		std::cout << "Created cube texture " << info.Width << "x" << info.Height << "\n";
 
 	*out = texid;
+	OpenGLContentManager().RegisterTexture(file, texid);
+
 	return (texid != 0);
 }
 
@@ -2259,7 +2622,14 @@ bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out)
 {
 	std::wstring wstr;
 	int length, size;
-	GLuint texid = 0;
+	GLuint texid = OpenGLContentManager().IDTexture(files[0]);
+
+	if( texid != 0 ) {
+		printf("Pointer %s\n", files[0]);
+		*out = texid;
+
+		return true;
+	}
 
 	glGenTextures(1, &texid);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, texid);
@@ -2340,6 +2710,8 @@ bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out)
 		std::cout << "Created cube texture\n";
 
 	*out = texid;
+	OpenGLContentManager().RegisterTexture(files[0], texid);
+
 	return (texid != 0);
 }
 
@@ -2380,6 +2752,8 @@ void GLKillAnyRogueObject()
 {
 	if( gdiplustoken )
 		Gdiplus::GdiplusShutdown(gdiplustoken);
+
+	OpenGLContentManager().Release();
 }
 
 void GLRenderText(const std::string& str, uint32_t tex, GLsizei width, GLsizei height)

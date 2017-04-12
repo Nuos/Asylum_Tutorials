@@ -882,45 +882,26 @@ void FUNC_PROTO(MatrixRotationAxis)(float out[16], float angle, float x, float y
 
 	FUNC_PROTO(Vec3Normalize)(u, u);
 
-#if defined(USE_VULKAN_PREFIX) || defined(USE_METAL_PREFIX) || defined(USE_D3D_PREFIX)
 	out[0] = cosa + u[0] * u[0] * (1.0f - cosa);
-	out[1] = u[0] * u[1] * (1.0f - cosa) - u[2] * sina;
-	out[2] = u[0] * u[2] * (1.0f - cosa) + u[1] * sina;
-	out[3] = 0;
-	
-	out[4] = u[1] * u[0] * (1.0f - cosa) + u[2] * sina;
+	out[4] = u[0] * u[1] * (1.0f - cosa) - u[2] * sina;
+	out[8] = u[0] * u[2] * (1.0f - cosa) + u[1] * sina;
+
+	out[1] = u[1] * u[0] * (1.0f - cosa) + u[2] * sina;
 	out[5] = cosa + u[1] * u[1] * (1.0f - cosa);
-	out[6] = u[1] * u[2] * (1.0f - cosa) - u[0] * sina;
-	out[7] = 0;
+	out[9] = u[1] * u[2] * (1.0f - cosa) - u[0] * sina;
 	
-	out[8] = u[2] * u[0] * (1.0f - cosa) - u[1] * sina;
-	out[9] = u[2] * u[1] * (1.0f - cosa) + u[0] * sina;
+	out[2] = u[2] * u[0] * (1.0f - cosa) - u[1] * sina;
+	out[6] = u[2] * u[1] * (1.0f - cosa) + u[0] * sina;
 	out[10] = cosa + u[2] * u[2] * (1.0f - cosa);
-	out[11] = 0;
-#else
-	// TODO:
-	out[0] = cosa + u[0] * u[0] * (1.0f - cosa);
-	out[1] = u[0] * u[1] * (1.0f - cosa) - u[2] * sina;
-	out[2] = - (u[0] * u[2] * (1.0f - cosa) + u[1] * sina);
-	out[3] = 0;
 
-	out[4] = u[1] * u[0] * (1.0f - cosa) + u[2] * sina;
-	out[5] = cosa + u[1] * u[1] * (1.0f - cosa);
-	out[6] = - (u[1] * u[2] * (1.0f - cosa) - u[0] * sina);
-	out[7] = 0;
-
-	out[8] = - (u[2] * u[0] * (1.0f - cosa) - u[1] * sina);
-	out[9] = - (u[2] * u[1] * (1.0f - cosa) + u[0] * sina);
-	out[10] = cosa + u[2] * u[2] * (1.0f - cosa);
-	out[11] = 0;
-#endif
-
+	out[3] = out[7] = out[11] = 0;
 	out[12] = out[13] = out[14] = 0;
 	out[15] = 1;
 }
 
 void FUNC_PROTO(MatrixRotationYawPitchRoll)(float out[16], float yaw, float pitch, float roll)
 {
+	// TODO:
 	float sy = sinf(yaw);
 	float sr = sinf(roll);
 	float sp = sinf(pitch);
@@ -950,6 +931,7 @@ void FUNC_PROTO(MatrixRotationYawPitchRoll)(float out[16], float yaw, float pitc
 
 void FUNC_PROTO(MatrixRotationRollPitchYaw)(float out[16], float roll, float pitch, float yaw)
 {
+	// TODO:
 	float sy = sinf(yaw);
 	float sr = sinf(roll);
 	float sp = sinf(pitch);
@@ -979,6 +961,7 @@ void FUNC_PROTO(MatrixRotationRollPitchYaw)(float out[16], float roll, float pit
 
 void FUNC_PROTO(MatrixRotationQuaternion)(float out[16], const float q[4])
 {
+	// TODO:
 	out[0] = 1.0f - 2.0f * (q[1] * q[1] + q[2] * q[2]);
 	out[1] = 2.0f * (q[0] * q[1] + q[2] * q[3]);
 	out[2] = 2.0f * (q[0] * q[2] - q[1] * q[3]);
@@ -1354,7 +1337,7 @@ float FUNC_PROTO(RayIntersectCapsule)(const float a[3], const float b[3], const 
 float FUNC_PROTO(HalfToFloat)(uint16_t bits)
 {
 	uint32_t magic = 126 << 23;
-	uint32_t fp32 = (bits & 0x8000);
+	uint32_t fp32 = (bits & 0x8000) << 16;
 	uint32_t mant = (bits & 0x000003ff);
 	int32_t exp = (bits >> 10) & 0x0000001f;
 

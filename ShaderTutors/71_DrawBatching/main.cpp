@@ -6,15 +6,7 @@
 #include "../common/basiccamera.h"
 #include "../common/perfmeasure.h"
 
-// vkCreateQueryPool!!!
-// az nvidia meg csal mert primaryt hiv tovabb
-// filterek!!!
-
-// - 50k keves haromszogu objektumot rajzolj
 // - bufferImageGranularity!!!!!
-// - If vkCmdPipelineBarrier is called within a render pass instance, the render pass must declare at least one self-dependency from the current subpass to itself
-// - barrier flusholja a GPU (cache)-t, erdemes batchelni
-// - fence minden cache-t flushol
 // - device lost lehetseges...mi tortenik majd fullscreenben?
 
 #define TITLE				"Shader sample 71: Vulkan drawcall batching"
@@ -888,9 +880,8 @@ void Event_KeyUp(unsigned char keycode)
 
 void Event_MouseMove(int x, int y, short dx, short dy)
 {
-	if( mousedown == 1 && debugmode )
-	{
-		debugcamera.OrbitRight(VKDegreesToRadians(dx) * -0.5f);
+	if( mousedown == 1 && debugmode ) {
+		debugcamera.OrbitRight(VKDegreesToRadians(dx) * 0.5f);
 		debugcamera.OrbitUp(VKDegreesToRadians(dy) * 0.5f);
 	}
 }
@@ -907,7 +898,7 @@ void Event_MouseUp(int x, int y, unsigned char button)
 
 void Update(float delta)
 {
-	// do nothing
+	debugcamera.Update(delta);
 }
 
 void Render(float alpha, float elapsedtime)
@@ -934,21 +925,21 @@ void Render(float alpha, float elapsedtime)
 
 	eye[0] = halfw * sinf(t * 2);
 	eye[1] = totalheight + 8.0f;
-	eye[2] = halfd * cosf(t * 3);
+	eye[2] = -halfd * cosf(t * 3);
 
 	tang[0] = halfw * cosf(t * 2) * 2;
-	tang[2] = -halfd * sinf(t * 3) * 3;
+	tang[2] = halfd * sinf(t * 3) * 3;
 	tang[1] = sqrtf(tang[0] * tang[0] + tang[2] * tang[2]) * -tanf(VKDegreesToRadians(60));
 
 	VKVec3Normalize(tang, tang);
 	VKVec3Add(look, eye, tang);
 
-	VKMatrixLookAtLH(view, eye, look, up);
-	VKMatrixPerspectiveFovLH(proj, (60.0f * 3.14159f) / 180.f,  (float)screenwidth / (float)screenheight, 1.5f, 50.0f);
+	VKMatrixLookAtRH(view, eye, look, up);
+	VKMatrixPerspectiveFovRH(proj, (60.0f * 3.14159f) / 180.f,  (float)screenwidth / (float)screenheight, 1.5f, 50.0f);
 	VKMatrixMultiply(unidata.viewproj, view, proj);
 
 	// setup uniforms
-	float lightpos[4] = { 1, 0.4f, -0.2f, 1 };
+	float lightpos[4] = { 1, 0.4f, 0.2f, 1 };
 	float radius = sqrtf(totalwidth * totalwidth * 0.25f + totalheight * totalheight * 0.25f + totaldepth * totaldepth * 0.25f);
 
 	VKVec3Normalize(lightpos, lightpos);
@@ -1004,6 +995,7 @@ void Render(float alpha, float elapsedtime)
 	{
 		DebugUniformData* debugunis = (DebugUniformData*)debugmesh->GetUniformBufferPointer();
 
+		debugcamera.Animate(alpha);
 		debugcamera.GetViewMatrix(view);
 		debugcamera.GetProjectionMatrix(proj);
 

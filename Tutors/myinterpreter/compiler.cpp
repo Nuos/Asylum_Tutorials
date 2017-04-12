@@ -1,4 +1,4 @@
-//=============================================================================================================
+
 #include "interpreter.h"
 #include "parser.hpp"
 
@@ -11,40 +11,40 @@ std::string& replace(std::string& out, const std::string& what, const std::strin
 	size_t pos = instr.find(what);
 	out = instr;
 
-    while( pos != std::string::npos )
-    {
-        out.replace(pos, what.length(), with);
-        pos = out.find(what, pos + with.length());
-    }
+	while( pos != std::string::npos )
+	{
+		out.replace(pos, what.length(), with);
+		pos = out.find(what, pos + with.length());
+	}
 
-    return out;
+	return out;
 }
-//=============================================================================================================
+
 std::string tostring(int value)
 {
-    char rem = 0;
-    bool sign = value < 0;
+	char rem = 0;
+	bool sign = value < 0;
 
-    std::string str("");
-    value = abs(value);
+	std::string str("");
+	value = abs(value);
 
 	if( value == 0 )
 		return "0";
 
-    while( value > 0 )
-    {
-        rem = value % 10;
-        value /= 10;
+	while( value > 0 )
+	{
+		rem = value % 10;
+		value /= 10;
 
-        str.insert(str.begin(), rem + 0x30);
-    }
+		str.insert(str.begin(), rem + 0x30);
+	}
 
-    if( sign )
-        str.insert(str.begin(), '-');
+	if( sign )
+		str.insert(str.begin(), '-');
 
-    return str;
+	return str;
 }
-//=============================================================================================================
+
 void Interpreter::Const_Add(expression_desc* expr1, expression_desc* expr2, int type)
 {
 	switch( type )
@@ -62,7 +62,7 @@ void Interpreter::Const_Add(expression_desc* expr1, expression_desc* expr2, int 
 		break;
 	}
 }
-//=============================================================================================================
+
 void Interpreter::Const_Sub(expression_desc* expr1, expression_desc* expr2, int type)
 {
 	switch( type )
@@ -80,7 +80,7 @@ void Interpreter::Const_Sub(expression_desc* expr1, expression_desc* expr2, int 
 		break;
 	}
 }
-//=============================================================================================================
+
 void Interpreter::Const_Mul(expression_desc* expr1, expression_desc* expr2, int type)
 {
 	switch( type )
@@ -98,7 +98,7 @@ void Interpreter::Const_Mul(expression_desc* expr1, expression_desc* expr2, int 
 		break;
 	}
 }
-//=============================================================================================================
+
 void Interpreter::Const_Div(expression_desc* expr1, expression_desc* expr2, int type)
 {
 	switch( type )
@@ -118,7 +118,7 @@ void Interpreter::Const_Div(expression_desc* expr1, expression_desc* expr2, int 
 		break;
 	}
 }
-//=============================================================================================================
+
 void Interpreter::Const_Mod(expression_desc* expr1, expression_desc* expr2, int type)
 {
 	switch( type )
@@ -136,7 +136,7 @@ void Interpreter::Const_Mod(expression_desc* expr1, expression_desc* expr2, int 
 		break;
 	}
 }
-//=============================================================================================================
+
 int Interpreter::Sizeof(int t)
 {
 	switch( t )
@@ -153,20 +153,20 @@ int Interpreter::Sizeof(int t)
 
 	return 0;
 }
-//=============================================================================================================
+
 expression_desc* Interpreter::Arithmetic_Expr(expression_desc* expr1, expression_desc* expr2, unsigned char op)
 {
 	assert(0, "Interpreter::Arithmetic_Expr(): NULL == expr1", expr1);
 	assert(0, "Interpreter::Arithmetic_Expr(): NULL == expr2", expr2);
 
-    if( expr1->constexpr )
-    {
-        if( expr2->constexpr )
-        {
+	if( expr1->constexpr )
+	{
+		if( expr2->constexpr )
+		{
 			// both are oonstant expressions
 			expr1->type = std::max(expr1->type, expr2->type);
 
-            switch( op )
+			switch( op )
 			{
 			case OP_ADD_RR:
 				Const_Add(expr1, expr2, expr1->type);
@@ -208,8 +208,8 @@ expression_desc* Interpreter::Arithmetic_Expr(expression_desc* expr1, expression
 			
 			expr1->address = UNKNOWN_ADDR;
 			expr1->constexpr = true;
-        }
-        else if( expr2->address == UNKNOWN_ADDR )
+		}
+		else if( expr2->address == UNKNOWN_ADDR )
 		{
 			// expr1 constexpr, expr2 in EAX
 			std::swap(expr1, expr2);
@@ -232,8 +232,8 @@ expression_desc* Interpreter::Arithmetic_Expr(expression_desc* expr1, expression
 			expr1->constexpr = false;
 		}
 		else
-        {
-            // expr1 constexpr, expr2 is on the stack
+		{
+			// expr1 constexpr, expr2 is on the stack
 			std::swap(expr1, expr2);
 			expr1->bytecode << OP(OP_MOV_RM) << REG(EBX) << expr1->address;
 
@@ -252,10 +252,10 @@ expression_desc* Interpreter::Arithmetic_Expr(expression_desc* expr1, expression
 			expr1->bytecode << OP(op) << REG(EAX) << REG(EBX);
 			expr1->address = UNKNOWN_ADDR;
 			expr1->constexpr = false;
-        }
-    }
-    else if( expr1->address == UNKNOWN_ADDR )
-    {
+		}
+	}
+	else if( expr1->address == UNKNOWN_ADDR )
+	{
 		if( expr2->constexpr )
 		{
 			// expr1 in EAX, expr2 constexpr
@@ -298,7 +298,7 @@ expression_desc* Interpreter::Arithmetic_Expr(expression_desc* expr1, expression
 			expr1->address = UNKNOWN_ADDR;
 			expr1->constexpr = false;
 		}
-    }
+	}
 	else
 	{
 		if( expr2->constexpr )
@@ -346,9 +346,9 @@ expression_desc* Interpreter::Arithmetic_Expr(expression_desc* expr1, expression
 	}
 	
 	interpreter->Deallocate(expr2);
-    return expr1;
+	return expr1;
 }
-//=============================================================================================================
+
 expression_desc* Interpreter::Unary_Expr(expression_desc* expr, unary_expr type)
 {
 	switch( type )
@@ -424,29 +424,28 @@ expression_desc* Interpreter::Unary_Expr(expression_desc* expr, unary_expr type)
 
 	return expr;
 }
-//=============================================================================================================
+
 int yylex()
 {
-    int ret = yyflex();
+	int ret = yyflex();
 
-    switch( ret )
-    {
-    case NUMBER:
-    case IDENTIFIER:
+	switch( ret )
+	{
+	case NUMBER:
+	case IDENTIFIER:
 	case STRING: {
 		yylval.text_t = interpreter->Allocate<std::string>();
-        replace(*yylval.text_t, "\\n", "\n", yytext);
+		replace(*yylval.text_t, "\\n", "\n", yytext);
 		} break;
 
-    default:
-        break;
-    }
+	default:
+		break;
+	}
 
-    return ret;
+	return ret;
 }
-//=============================================================================================================
+
 void yyerror(const char *s)
 {
 	std::cout << "* ERROR: ln " << yylloc.first_line << ": " << s << "\n";
 }
-//=============================================================================================================

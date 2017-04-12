@@ -1,4 +1,4 @@
-//=============================================================================================================
+
 #include "interpreter.h"
 #include "lexer.cpp"
 #include "parser.cpp"
@@ -7,18 +7,18 @@
 
 Interpreter::stm_ptr Interpreter::op_special[NUM_SPECIAL] =
 {
-    &Interpreter::Print_Reg,
-    &Interpreter::Print_Memory
+	&Interpreter::Print_Reg,
+	&Interpreter::Print_Memory
 };
 
 Interpreter::Interpreter()
 {
-    interpreter = this;
+	interpreter = this;
 	stack = 0;
 
 	scopes.resize(5);
 }
-//=============================================================================================================
+
 Interpreter::~Interpreter()
 {
 	if( stack )
@@ -27,7 +27,7 @@ Interpreter::~Interpreter()
 		stack = 0;
 	}
 }
-//=============================================================================================================
+
 void Interpreter::Cleanup()
 {
 	for( size_t i = 0; i < scopes.size(); ++i )
@@ -35,57 +35,57 @@ void Interpreter::Cleanup()
 
 	scopes.clear();
 }
-//=============================================================================================================
+
 bool Interpreter::Compile(const std::string& file)
 {
 #ifdef _MSC_VER
-    FILE* infile = NULL;
-    fopen_s(&infile, file.c_str(), "rb");
+	FILE* infile = NULL;
+	fopen_s(&infile, file.c_str(), "rb");
 #else
-    FILE* infile = fopen(file.c_str(), "rb");
+	FILE* infile = fopen(file.c_str(), "rb");
 #endif
 
-    assert(false, "Interpreter::Compile(): Could not open file", infile);
+	assert(false, "Interpreter::Compile(): Could not open file", infile);
 
-    // get file length
-    fseek(infile, 0, SEEK_END);
-    long end = ftell(infile);
+	// get file length
+	fseek(infile, 0, SEEK_END);
+	long end = ftell(infile);
 
-    fseek(infile, 0, SEEK_SET);
-    long length = end - ftell(infile);
+	fseek(infile, 0, SEEK_SET);
+	long length = end - ftell(infile);
 
-    // read program into buffer
-    char* buffer = (char*)malloc((length + 2) * sizeof(char));
-    assert(false, "Interpreter::Compile(): Could not create buffer", buffer);
+	// read program into buffer
+	char* buffer = (char*)malloc((length + 2) * sizeof(char));
+	assert(false, "Interpreter::Compile(): Could not create buffer", buffer);
 
-    buffer[length + 1] = buffer[length] = 0;
+	buffer[length + 1] = buffer[length] = 0;
 
-    fread(buffer, sizeof(char), length, infile);
-    fclose(infile);
+	fread(buffer, sizeof(char), length, infile);
+	fclose(infile);
 
-    std::cout << "Compiling \'" << file << "\'\n";
-    yy_scan_buffer(buffer, length + 2);
-    
-    if( !stack )
+	std::cout << "Compiling \'" << file << "\'\n";
+	yy_scan_buffer(buffer, length + 2);
+
+	if( !stack )
 		stack = (char*)malloc(STACK_SIZE);
 
-    progname = file;
+	progname = file;
 	current_scope = 0;
 	current_func = 0;
 	alloc_addr = 0;
 
-    // run lexer and parser
-    int ret = yyparse();
+	// run lexer and parser
+	int ret = yyparse();
 
-    yy_delete_buffer(YY_CURRENT_BUFFER);
-    free(buffer);
+	yy_delete_buffer(YY_CURRENT_BUFFER);
+	free(buffer);
 
-    Cleanup();
+	Cleanup();
 
-    nassert(false, "Interpreter::Compile(): Parser error", ret != 0);
-    return true;
+	nassert(false, "Interpreter::Compile(): Parser error", ret != 0);
+	return true;
 }
-//=============================================================================================================
+
 bool Interpreter::Link()
 {
 	size_t off = 0;
@@ -116,7 +116,7 @@ bool Interpreter::Link()
 
 			if( ref->func )
 			{
-			    nassert(false, "Unresolved external '" << ref->func->name << "'",
+				nassert(false, "Unresolved external '" << ref->func->name << "'",
 					ref->func->address == UNKNOWN_ADDR);
 
 				tmp << OP(OP_JMP) << (ref->func->address - (int)off) << NIL;
@@ -139,15 +139,15 @@ bool Interpreter::Link()
 
 	return true;
 }
-//=============================================================================================================
+
 bool Interpreter::Run()
 {
 	if( program.size() == 0 )
 		return false;
 
-    stm_ptr stm;
-    unsigned char opcode;
-    char* ptr;
+	stm_ptr stm;
+	unsigned char opcode;
+	char* ptr;
 
 	memset(registers, 0, sizeof(registers));
 
@@ -159,24 +159,24 @@ bool Interpreter::Run()
 	size_t bytesize = program.size();
 	size_t stackdepth = 0;
 
-    std::cout << "Executing program '" << progname << "'...\n";
+	std::cout << "Executing program '" << progname << "'...\n";
 
-    while( (size_t)registers[EIP] < bytesize )
-    {
-        ptr = (bytecode + registers[EIP]);
+	while( (size_t)registers[EIP] < bytesize )
+	{
+		ptr = (bytecode + registers[EIP]);
 
-        opcode = *((unsigned char*)ptr);
-        registers[EIP] += ENTRY_SIZE;
+		opcode = *((unsigned char*)ptr);
+		registers[EIP] += ENTRY_SIZE;
 
-        // 20 special statements reserved
-        if( opcode < 0x20 )
-        {
-            stm = op_special[opcode];
-            (*stm)(ARG1_PTR(ptr), ARG2_PTR(ptr));
-        }
-        else
-        {
-            // common statements
+		// 20 special statements reserved
+		if( opcode < 0x20 )
+		{
+			stm = op_special[opcode];
+			(*stm)(ARG1_PTR(ptr), ARG2_PTR(ptr));
+		}
+		else
+		{
+			// common statements
 			switch( opcode )
 			{
 			case OP_PUSH: {
@@ -370,12 +370,12 @@ bool Interpreter::Run()
 			default:
 				break;
 			}
-        }
-    }
+		}
+	}
 
-    return true;
+	return true;
 }
-//=============================================================================================================
+
 void Interpreter::Disassemble()
 {
 	size_t off = 0;
@@ -405,12 +405,12 @@ void Interpreter::Disassemble()
 	std::cout << "Disassembly:\n";
 
 	while( off < bytesize )
-    {
-        ptr = (bytecode + off);
+	{
+		ptr = (bytecode + off);
 
-        opcode = *((unsigned char*)ptr);
-        arg1 = *((int*)(ptr + sizeof(unsigned char)));
-        arg2 = *((int*)(ptr + sizeof(unsigned char) + sizeof(int)));
+		opcode = *((unsigned char*)ptr);
+		arg1 = *((int*)(ptr + sizeof(unsigned char)));
+		arg2 = *((int*)(ptr + sizeof(unsigned char) + sizeof(int)));
 
 		sprintf_s(buff, 7, "%04u: ", off);
 
@@ -601,4 +601,3 @@ void Interpreter::Disassemble()
 		off += ENTRY_SIZE;
 	}
 }
-//=============================================================================================================

@@ -1,12 +1,13 @@
 
-Asylum_Tutorials
-================
+#Asylum Tutorials
 
-Code for tutorials posted on my blog.
+This project is aimed to provide supplementary material for my (hungarian) articles posted on my [blog](http://darthasylum.blog.hu/).
 
+##Compilation
 
-Notes
-=====
+You need *Visual Studio 2010* or newer to compile the samples. All external libraries are included in the repo (except the Vulkan drivers and validation layers).
+Some of the samples have a prebuilt executable in the `bin` folder.
 
-VS 2012 projects can be compiled with VS 2010 too, just change platform toolset to v100.
-I try to keep both up-to-date.
+##License
+
+The code is provided under the BSD license.

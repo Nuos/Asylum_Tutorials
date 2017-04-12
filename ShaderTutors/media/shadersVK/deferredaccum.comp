@@ -61,7 +61,7 @@ void main()
 
 	// STEP 1: calculate min/max depth in this tile
 	float depth = imageLoad(image2, loc).r;
-	float linearz = uniforms.matProj[3][2] / (depth - uniforms.matProj[2][2]);
+	float linearz = -(uniforms.matProj[3][2] / (-depth - uniforms.matProj[2][2]));
 
 	float minz = min(uniforms.clipPlanes.y, linearz);
 	float maxz = max(uniforms.clipPlanes.x, linearz);
@@ -85,8 +85,8 @@ void main()
 		FrustumPlanes[1] = vec4(-1, 0, 0, -1 + step2.x);	// right
 		FrustumPlanes[2] = vec4(0, 1, 0, 1 - step1.y);		// bottom
 		FrustumPlanes[3] = vec4(0, -1, 0, -1 + step2.y);	// top
-		FrustumPlanes[4] = vec4(0, 0, 1, -minz);			// near
-		FrustumPlanes[5] = vec4(0, 0, -1, maxz);			// far
+		FrustumPlanes[4] = vec4(0, 0, -1, minz);			// near
+		FrustumPlanes[5] = vec4(0, 0, 1, maxz);				// far
 
 		for( int i = 0; i < 4; ++i ) {
 			FrustumPlanes[i] = FrustumPlanes[i] * uniforms.matViewProj;

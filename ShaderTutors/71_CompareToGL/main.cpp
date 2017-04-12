@@ -118,7 +118,7 @@ void UpdateTiles(float* viewproj);
 
 SceneObjectPrototype::SceneObjectPrototype(const char* filename)
 {
-	GL_ASSERT(GLCreateMeshFromQM(filename, 0, 0, &mesh));
+	GL_ASSERT(GLCreateMeshFromQM(filename, &mesh));
 	GL_ASSERT(GLCreateEffectFromFile("../media/shadersGL/blinnphong.vert", 0, "../media/shadersGL/blinnphong.frag", &effect));
 }
 
@@ -241,7 +241,7 @@ bool InitScene()
 	glClearDepth(1.0);
 
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
+	glCullFace(GL_BACK);
 
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_DEPTH_TEST);
@@ -414,6 +414,8 @@ void UninitScene()
 
 	for( size_t i = 0; i < ARRAY_SIZE(prototypes); ++i )
 		delete prototypes[i];
+
+	GLKillAnyRogueObject();
 }
 
 void Event_KeyDown(unsigned char keycode)
@@ -428,9 +430,8 @@ void Event_KeyUp(unsigned char keycode)
 
 void Event_MouseMove(int x, int y, short dx, short dy)
 {
-	if( mousedown == 1 && debugmode )
-	{
-		debugcamera.OrbitRight(GLDegreesToRadians(dx) * -0.5f);
+	if( mousedown == 1 && debugmode ) {
+		debugcamera.OrbitRight(GLDegreesToRadians(dx) * 0.5f);
 		debugcamera.OrbitUp(GLDegreesToRadians(dy) * 0.5f);
 	}
 }
@@ -447,6 +448,7 @@ void Event_MouseUp(int x, int y, unsigned char button)
 
 void Update(float delta)
 {
+	debugcamera.Update(delta);
 }
 
 void Render(float alpha, float elapsedtime)
@@ -480,21 +482,21 @@ void Render(float alpha, float elapsedtime)
 
 	eye[0] = halfw * sinf(t * 2);
 	eye[1] = totalheight + 8.0f;
-	eye[2] = halfd * cosf(t * 3);
+	eye[2] = -halfd * cosf(t * 3);
 
 	tang[0] = halfw * cosf(t * 2) * 2;
-	tang[2] = -halfd * sinf(t * 3) * 3;
+	tang[2] = halfd * sinf(t * 3) * 3;
 	tang[1] = sqrtf(tang[0] * tang[0] + tang[2] * tang[2]) * -tanf(GLDegreesToRadians(60));
 
 	GLVec3Normalize(tang, tang);
 	GLVec3Add(look, eye, tang);
 
-	GLMatrixLookAtLH(view, eye, look, up);
-	GLMatrixPerspectiveFovLH(proj, (60.0f * 3.14159f) / 180.f,  (float)screenwidth / (float)screenheight, 0.1f, 100.0f);
+	GLMatrixLookAtRH(view, eye, look, up);
+	GLMatrixPerspectiveFovRH(proj, (60.0f * 3.14159f) / 180.f,  (float)screenwidth / (float)screenheight, 0.1f, 100.0f);
 	GLMatrixMultiply(globalunis.viewproj, view, proj);
 
 	// setup uniforms
-	float lightpos[4] = { 1, 0.4f, -0.2f, 1 };
+	float lightpos[4] = { 1, 0.4f, 0.2f, 1 };
 	float radius = sqrtf(totalwidth * totalwidth * 0.25f + totalheight * totalheight * 0.25f + totaldepth * totaldepth * 0.25f);
 
 	GLVec3Normalize(lightpos, lightpos);
@@ -509,6 +511,7 @@ void Render(float alpha, float elapsedtime)
 
 	if( debugmode )
 	{
+		debugcamera.Animate(alpha);
 		debugcamera.GetViewMatrix(view);
 		debugcamera.GetProjectionMatrix(proj);
 

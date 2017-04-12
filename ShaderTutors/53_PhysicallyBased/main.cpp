@@ -503,7 +503,7 @@ SceneObject::SceneObject(const SceneObject& other)
 
 SceneObject::SceneObject(const char* file, RigidBody::BodyType type, float scale)
 {
-	bool success = GLCreateMeshFromQM(file, 0, &numsubsets, &mesh);
+	bool success = GLCreateMeshFromQM(file, &mesh);
 
 	if( success )
 	{
@@ -527,6 +527,8 @@ SceneObject::SceneObject(const char* file, RigidBody::BodyType type, float scale
 
 		scaling = scale;
 		isclone = false;
+
+		numsubsets = mesh->GetNumSubsets();
 
 		materials.resize(numsubsets);
 		RecalculateBoundingBox();
@@ -818,7 +820,7 @@ bool InitScene()
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
-	if( !GLCreateMeshFromQM("../media/meshes10/sky.qm", 0, 0, &skymesh) )
+	if( !GLCreateMeshFromQM("../media/meshes10/sky.qm", &skymesh) )
 	{
 		MYERROR("Could not load 'sky'");
 		return false;

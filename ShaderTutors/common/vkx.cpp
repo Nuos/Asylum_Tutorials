@@ -2097,7 +2097,7 @@ VulkanGraphicsPipeline::GraphicsTemporaryData::GraphicsTemporaryData()
 	rasterizationstate.flags					= 0;
 	rasterizationstate.polygonMode				= VK_POLYGON_MODE_FILL;
 	rasterizationstate.cullMode					= VK_CULL_MODE_BACK_BIT;
-	rasterizationstate.frontFace				= VK_FRONT_FACE_CLOCKWISE;
+	rasterizationstate.frontFace				= VK_FRONT_FACE_COUNTER_CLOCKWISE;	// as in OpenGL
 	rasterizationstate.depthClampEnable			= VK_FALSE;
 	rasterizationstate.rasterizerDiscardEnable	= VK_FALSE;
 	rasterizationstate.depthBiasEnable			= VK_FALSE;
@@ -2405,13 +2405,15 @@ static void AccumulateTangentFrame(VulkanTBNVertex* vdata, uint32_t i1, uint32_t
 	VulkanTBNVertex* v2 = (vdata + i2);
 	VulkanTBNVertex* v3 = (vdata + i3);
 
-	float ax = v2->x - v1->x;
-	float ay = v2->y - v1->y;
-	float az = v2->z - v1->z;
+	float a[3], b[3], c[3], t[3];
 
-	float cx = v3->x - v1->x;
-	float cy = v3->y - v1->y;
-	float cz = v3->z - v1->z;
+	a[0] = v2->x - v1->x;
+	a[1] = v2->y - v1->y;
+	a[2] = v2->z - v1->z;
+
+	c[0] = v3->x - v1->x;
+	c[1] = v3->y - v1->y;
+	c[2] = v3->z - v1->z;
 
 	float s1 = v2->u - v1->u;
 	float s2 = v3->u - v1->u;
@@ -2420,28 +2422,37 @@ static void AccumulateTangentFrame(VulkanTBNVertex* vdata, uint32_t i1, uint32_t
 
 	float invdet = 1.0f / ((s1 * t2 - s2 * t1) + 0.0001f);
 
-	float tx = (t2 * ax - t1 * cx) * invdet;
-	float ty = (t2 * ay - t1 * cy) * invdet;
-	float tz = (t2 * az - t1 * cz) * invdet;
+	t[0] = (t2 * a[0] - t1 * c[0]) * invdet;
+	t[1] = (t2 * a[1] - t1 * c[1]) * invdet;
+	t[2] = (t2 * a[2] - t1 * c[2]) * invdet;
 
-	float bx = (s1 * cx - s2 * ax) * invdet;
-	float by = (s1 * cy - s2 * ay) * invdet;
-	float bz = (s1 * cz - s2 * az) * invdet;
+	b[0] = (s1 * c[0] - s2 * a[0]) * invdet;
+	b[1] = (s1 * c[1] - s2 * a[1]) * invdet;
+	b[2] = (s1 * c[2] - s2 * a[2]) * invdet;
 
-	v1->tx += tx;	v2->tx += tx;	v3->tx += tx;
-	v1->ty += ty;	v2->ty += ty;	v3->ty += ty;
-	v1->tz += tz;	v2->tz += tz;	v3->tz += tz;
+	v1->tx += t[0];	v2->tx += t[0];	v3->tx += t[0];
+	v1->ty += t[1];	v2->ty += t[1];	v3->ty += t[1];
+	v1->tz += t[2];	v2->tz += t[2];	v3->tz += t[2];
 
-	v1->bx += bx;	v2->bx += bx;	v3->bx += bx;
-	v1->by += by;	v2->by += by;	v3->by += by;
-	v1->bz += bz;	v2->bz += bz;	v3->bz += bz;
+	v1->bx += b[0];	v2->bx += b[0];	v3->bx += b[0];
+	v1->by += b[1];	v2->by += b[1];	v3->by += b[1];
+	v1->bz += b[2];	v2->bz += b[2];	v3->bz += b[2];
 }
 
 static void OrthogonalizeTangentFrame(VulkanTBNVertex& vert)
 {
 	float t[3], b[3], q[3];
 
-	//VKVec3Normalize(&vert.nx, &vert.nx);
+	bool tangentinvalid = (VKVec3Dot(&vert.tx, &vert.tx) < 1e-6f);
+	bool bitangentinvalid = (VKVec3Dot(&vert.bx, &vert.bx) < 1e-6f);
+
+	if( tangentinvalid && bitangentinvalid ) {
+		// TODO:
+	} else if( tangentinvalid ) {
+		VKVec3Cross(&vert.tx, &vert.bx, &vert.nx);
+	} else if( bitangentinvalid ) {
+		VKVec3Cross(&vert.bx, &vert.nx, &vert.tx);
+	}
 
 	VKVec3Scale(t, &vert.nx, VKVec3Dot(&vert.nx, &vert.tx));
 	VKVec3Subtract(t, &vert.tx, t);
@@ -2458,7 +2469,6 @@ static void OrthogonalizeTangentFrame(VulkanTBNVertex& vert)
 VulkanBasicMesh::VulkanBasicMesh(uint32_t numvertices, uint32_t numindices, uint32_t vertexstride, VulkanBuffer* buff, VkDeviceSize off)
 {
 	totalsize	= numvertices * vertexstride;
-	descriptor	= 0;
 	vertexcount	= numvertices;
 	indexcount	= numindices;
 	vstride		= vertexstride;
@@ -2524,6 +2534,7 @@ VulkanBasicMesh::VulkanBasicMesh(uint32_t numvertices, uint32_t numindices, uint
 	subsettable[0].PrimitiveType	= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	subsettable[0].VertexCount		= numvertices;
 	subsettable[0].VertexStart		= 0;
+	subsettable[0].Enabled			= true;
 
 	materials[0].Ambient			= VulkanColor(0, 0, 0, 1);
 	materials[0].Diffuse			= VulkanColor(1, 1, 1, 1);
@@ -2574,18 +2585,19 @@ void VulkanBasicMesh::DrawSubset(VkCommandBuffer commandbuffer, uint32_t index, 
 
 	const VulkanAttributeRange& subset = subsettable[index];
 
-	if( rebind )
-	{
-		VkBuffer vbuff = vertexbuffer->GetBuffer();
+	if( subset.Enabled ) {
+		if( rebind ) {
+			VkBuffer vbuff = vertexbuffer->GetBuffer();
 
-		vkCmdBindVertexBuffers(commandbuffer, 0, 1, &vbuff, &baseoffset);
-		vkCmdBindIndexBuffer(commandbuffer, indexbuffer->GetBuffer(), indexoffset, indexformat);
+			vkCmdBindVertexBuffers(commandbuffer, 0, 1, &vbuff, &baseoffset);
+			vkCmdBindIndexBuffer(commandbuffer, indexbuffer->GetBuffer(), indexoffset, indexformat);
+		}
+
+		if( pipeline )
+			vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipelineLayout(), 0, 1, pipeline->GetDescriptorSets(0) + index, 0, NULL);
+
+		vkCmdDrawIndexed(commandbuffer, subset.IndexCount, 1, subset.IndexStart, 0, 0);
 	}
-
-	if( pipeline )
-		vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipelineLayout(), 0, 1, pipeline->GetDescriptorSets(0) + index, 0, NULL);
-
-	vkCmdDrawIndexed(commandbuffer, subset.IndexCount, 1, subset.IndexStart, 0, 0);
 }
 
 void VulkanBasicMesh::DrawSubsetInstanced(VkCommandBuffer commandbuffer, uint32_t index, VulkanGraphicsPipeline* pipeline, uint32_t numinstances, bool rebind)
@@ -2594,18 +2606,26 @@ void VulkanBasicMesh::DrawSubsetInstanced(VkCommandBuffer commandbuffer, uint32_
 
 	const VulkanAttributeRange& subset = subsettable[index];
 
-	if( rebind )
-	{
-		VkBuffer vbuff = vertexbuffer->GetBuffer();
+	if( subset.Enabled ) {
+		if( rebind ) {
+			VkBuffer vbuff = vertexbuffer->GetBuffer();
 
-		vkCmdBindVertexBuffers(commandbuffer, 0, 1, &vbuff, &baseoffset);
-		vkCmdBindIndexBuffer(commandbuffer, indexbuffer->GetBuffer(), indexoffset, indexformat);
+			vkCmdBindVertexBuffers(commandbuffer, 0, 1, &vbuff, &baseoffset);
+			vkCmdBindIndexBuffer(commandbuffer, indexbuffer->GetBuffer(), indexoffset, indexformat);
+		}
+
+		if( pipeline )
+			vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipelineLayout(), 0, 1, pipeline->GetDescriptorSets(0) + index, 0, NULL);
+
+		vkCmdDrawIndexed(commandbuffer, subset.IndexCount, numinstances, subset.IndexStart, 0, 0);
 	}
+}
 
-	if( pipeline )
-		vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipelineLayout(), 0, 1, pipeline->GetDescriptorSets(0) + index, 0, NULL);
+void VulkanBasicMesh::EnableSubset(uint32_t index, bool enable)
+{
+	VK_ASSERT(index < numsubsets);
 
-	vkCmdDrawIndexed(commandbuffer, subset.IndexCount, numinstances, subset.IndexStart, 0, 0);
+	subsettable[index].Enabled = enable;
 }
 
 void VulkanBasicMesh::UploadToVRAM(VkCommandBuffer commandbuffer)
@@ -2875,6 +2895,7 @@ VulkanBasicMesh* VulkanBasicMesh::LoadFromQM(const char* file, VulkanBuffer* buf
 
 		subset.AttribId = i;
 		subset.PrimitiveType = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		subset.Enabled = true;
 
 		fread(&subset.IndexStart, 4, 1, infile);
 		fread(&subset.VertexStart, 4, 1, infile);
@@ -2918,7 +2939,7 @@ VulkanBasicMesh* VulkanBasicMesh::LoadFromQM(const char* file, VulkanBuffer* buf
 			if( buff[1] != ',' )
 			{
 				str = basedir + buff;
-				material.NormalMap = VulkanImage::CreateFromFile(str.c_str(), true);
+				material.NormalMap = VulkanImage::CreateFromFile(str.c_str(), false);
 			}
 
 			ReadString(infile, buff);

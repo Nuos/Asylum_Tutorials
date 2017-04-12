@@ -96,6 +96,7 @@ struct VulkanAttributeRange
 	uint32_t	IndexCount;
 	uint32_t	VertexStart;
 	uint32_t	VertexCount;
+	bool		Enabled;
 };
 
 struct VulkanMaterial
@@ -549,7 +550,6 @@ private:
 	VulkanAttributeRange*				subsettable;
 	VulkanMaterial*						materials;
 
-	VkVertexInputAttributeDescription*	descriptor;
 	VkDescriptorBufferInfo				unibufferinfo;
 
 	uint8_t*							mappedvdata;
@@ -575,6 +575,7 @@ public:
 	void Draw(VkCommandBuffer commandbuffer, VulkanGraphicsPipeline* pipeline, bool rebind = true);
 	void DrawSubset(VkCommandBuffer commandbuffer, uint32_t index, VulkanGraphicsPipeline* pipeline, bool rebind = true);
 	void DrawSubsetInstanced(VkCommandBuffer commandbuffer, uint32_t index, VulkanGraphicsPipeline* pipeline, uint32_t numinstances, bool rebind = true);
+	void EnableSubset(uint32_t index, bool enable);
 	void UploadToVRAM(VkCommandBuffer commandbuffer);
 	void DeleteStagingBuffers();
 	void GenerateTangentFrame();

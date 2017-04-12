@@ -23,6 +23,7 @@ private:
 	float					smoothedangles[3];
 	float					smoothedposition[3];
 	uint32_t				state;
+	bool					finished;
 
 	void GetViewVectors(float forward[3], float right[3], float up[3]);
 
@@ -51,6 +52,10 @@ public:
 	void Event_MouseMove(int16_t dx, int16_t dy);
 	void Event_MouseDown(uint8_t button);
 	void Event_MouseUp(uint8_t button);
+
+	inline bool IsAnimationFinished() const {
+		return finished;
+	}
 };
 
 #endif

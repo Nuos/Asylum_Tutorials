@@ -274,8 +274,8 @@ bool InitScene()
 
 	OpenGLAttributeRange table[] =
 	{
-		{ GLPT_LINELIST, 0, 0, 0, 0, 44 },
-		{ GLPT_LINELIST, 1, 0, numcontrolindices, 44, numcontrolvertices }
+		{ GLPT_LINELIST, 0, 0, 0, 0, 44, true },
+		{ GLPT_LINELIST, 1, 0, numcontrolindices, 44, numcontrolvertices, true }
 	};
 
 	supportlines->SetAttributeTable(table, 2);

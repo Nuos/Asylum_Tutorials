@@ -61,12 +61,12 @@ void FPSCamera::GetViewVectors(float forward[3], float right[3], float up[3])
 	float yaw[16];
 	float pitch[16];
 
-	// TODO: rollpitchyaw
 	GLMatrixRotationAxis(yaw, anglecurve.curr[0], 0, 1, 0);
 	GLMatrixRotationAxis(pitch, anglecurve.curr[1], 1, 0, 0);
 
 	GLMatrixMultiply(view, yaw, pitch);
 
+	// rotation matrix is right-handed by default
 	GLVec3Set(forward, -view[2], -view[6], -view[10]);
 	GLVec3Set(right, view[0], view[4], view[8]);
 	GLVec3Set(up, view[1], view[5], view[9]);

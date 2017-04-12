@@ -277,7 +277,7 @@ float RayIntersectSphere(out float3 n, float3 center, float radius, float3 start
 	float d = b * b - 4.0f * a * c;
 	float t = 0;
 
-	if( d > 0.0f)
+	if( d > 0.0f )
 		t = (-b - sqrt(d)) / (2.0f * a);
 
 	n = normalize(start + t * dir - center);

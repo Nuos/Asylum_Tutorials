@@ -100,18 +100,13 @@ bool InitScene()
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_DEPTH_TEST);
 
-	OpenGLMaterial* materials = 0;
-	GLuint nummaterials = 0;
-
-	bool ok = GLCreateMeshFromQM("../media/meshes/teapot.qm", &materials, &nummaterials, &mesh);
+	bool ok = GLCreateMeshFromQM("../media/meshes/teapot.qm", &mesh);
 
 	if( !ok )
 	{
 		MYERROR("Could not load mesh");
 		return false;
 	}
-
-	delete[] materials;
 
 	// shader
 	GLint length;
@@ -206,6 +201,8 @@ void UninitScene()
 	vertexshader = 0;
 	pixelshader = 0;
 	program = 0;
+
+	GLKillAnyRogueObject();
 }
 //*************************************************************************************************************
 void Event_KeyDown(unsigned char keycode)

@@ -38,18 +38,13 @@ bool InitScene()
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_DEPTH_TEST);
 
-	OpenGLMaterial* materials = 0;
-	GLuint nummaterials = 0;
-
-	bool ok = GLCreateMeshFromQM("../media/meshes/teapot.qm", &materials, &nummaterials, &mesh);
+	bool ok = GLCreateMeshFromQM("../media/meshes/teapot.qm", &mesh);
 
 	if( !ok )
 	{
 		MYERROR("Could not load mesh");
 		return false;
 	}
-
-	delete[] materials;
 
 	// texture
 	glGenTextures(1, &texture);
@@ -100,6 +95,8 @@ void UninitScene()
 	coloredtexture = 0;
 	mesh = 0;
 	texture = 0;
+
+	GLKillAnyRogueObject();
 }
 //*************************************************************************************************************
 void Event_KeyDown(unsigned char keycode)

@@ -143,25 +143,18 @@ bool InitScene()
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_DEPTH_TEST);
 
-	OpenGLMaterial* materials = 0;
-	GLuint nummaterials = 0;
-
 	// load objects
-	if( !GLCreateMeshFromQM("../media/meshes/teapot.qm", &materials, &nummaterials, &teapot) )
+	if( !GLCreateMeshFromQM("../media/meshes/teapot.qm", &teapot) )
 	{
 		MYERROR("Could not load teapot");
 		return false;
 	}
 
-	delete[] materials;
-
-	if( !GLCreateMeshFromQM("../media/meshes/cube.qm", &materials, &nummaterials, &box) )
+	if( !GLCreateMeshFromQM("../media/meshes/cube.qm", &box) )
 	{
 		MYERROR("Could not load box");
 		return false;
 	}
-
-	delete[] materials;
 
 	// calculate scene bounding box
 	OpenGLAABox tmpbox;
@@ -229,7 +222,7 @@ bool InitScene()
 		return false;
 	}
 
-	if( !GLCreateTextureFromFile("../media/textures/static_sky.jpg", true, &texture3) )
+	if( !GLCreateTextureFromFile("../media/textures/static_sky.jpg", true, &texture3, GLTEX_FLIPX) )
 	{
 		MYERROR("Could not load texture");
 		return false;

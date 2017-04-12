@@ -13,6 +13,8 @@ SpectatorCamera::SpectatorCamera()
 	Far			= 50.0f;
 
 	state = 0;
+	finished = true;
+
 	array_state_set(anglecurve, 0, 0, 0);
 	array_state_set(positioncurve, 0, 1.8f, 0);
 
@@ -27,12 +29,7 @@ void SpectatorCamera::FitToBox(const CLASS_PROTO(AABox)& box)
 {
 	float look[3];
 
-#ifdef USE_GL_PREFIX
-	FUNC_PROTO(Vec3Set)(look, -view[2], -view[6], -view[10]);
-#else
 	FUNC_PROTO(Vec3Set)(look, view[2], view[6], view[10]);
-#endif
-
 	FUNC_PROTO(Vec3Add)(look, smoothedposition, look);
 	FUNC_PROTO(FitToBox)(Near, Far, smoothedposition, look, box);
 }
@@ -44,7 +41,7 @@ void SpectatorCamera::GetEyePosition(float out[3])
 
 void SpectatorCamera::GetViewMatrix(float out[16])
 {
-	memcpy(out, view, 16 * sizeof(float));
+	FUNC_PROTO(MatrixAssign)(out, view);
 }
 
 void SpectatorCamera::GetViewVectors(float forward[3], float right[3], float up[3])
@@ -54,32 +51,25 @@ void SpectatorCamera::GetViewVectors(float forward[3], float right[3], float up[
 
 	FUNC_PROTO(MatrixRotationAxis)(yaw, anglecurve.curr[0], 0, 1, 0);
 	FUNC_PROTO(MatrixRotationAxis)(pitch, anglecurve.curr[1], 1, 0, 0);
-
 	FUNC_PROTO(MatrixMultiply)(view, yaw, pitch);
 
-#ifdef USE_GL_PREFIX
+	// rotation matrix is right-handed
 	FUNC_PROTO(Vec3Set)(forward, -view[2], -view[6], -view[10]);
-#else
-	FUNC_PROTO(Vec3Set)(forward, view[2], view[6], view[10]);
-#endif
-
 	FUNC_PROTO(Vec3Set)(right, view[0], view[4], view[8]);
 	FUNC_PROTO(Vec3Set)(up, view[1], view[5], view[9]);
 }
 
 void SpectatorCamera::GetProjectionMatrix(float out[16])
 {
-#ifdef USE_OPENGL_PREFIX
 	FUNC_PROTO(MatrixPerspectiveFovRH)(out, Fov, Aspect, Near, Far);
-#else
-	FUNC_PROTO(MatrixPerspectiveFovLH)(out, Fov, Aspect, Near, Far);
-#endif
 }
 
 void SpectatorCamera::SetEyePosition(float x, float y, float z)
 {
 	FUNC_PROTO(Vec3Set)(smoothedposition, x, y, z);
+
 	array_state_set(positioncurve, x, y, z);
+	finished = false;
 }
 
 void SpectatorCamera::SetOrientation(float yaw, float pitch, float roll)
@@ -88,6 +78,7 @@ void SpectatorCamera::SetOrientation(float yaw, float pitch, float roll)
 	FUNC_PROTO(Vec3Set)(smoothedangles, yaw, pitch, roll);
 
 	array_state_set(anglecurve, yaw, pitch, roll);
+	finished = false;
 }
 
 void SpectatorCamera::Update(float dt)
@@ -102,6 +93,11 @@ void SpectatorCamera::Update(float dt)
 	diff[0] = (targetangles[0] - anglecurve.curr[0]) * dt * ROTATIONAL_INVINTERTIA;
 	diff[1] = (targetangles[1] - anglecurve.curr[1]) * dt * ROTATIONAL_INVINTERTIA;
 	diff[2] = 0;
+
+	if( state != 0 )
+		finished = false;
+	else if( FUNC_PROTO(Vec3Dot)(diff, diff) < 1e-8f )
+		finished = true;
 
 	anglecurve.extend(diff);
 	
@@ -136,13 +132,13 @@ void SpectatorCamera::Update(float dt)
 
 void SpectatorCamera::Animate(float alpha)
 {
+	float yaw[16];
+	float pitch[16];
+
 	anglecurve.smooth(smoothedangles, alpha);
 	positioncurve.smooth(smoothedposition, alpha);
 
 	// recalculate view matrix
-	float yaw[16];
-	float pitch[16];
-
 	FUNC_PROTO(MatrixRotationAxis)(yaw, smoothedangles[0], 0, 1, 0);
 	FUNC_PROTO(MatrixRotationAxis)(pitch, smoothedangles[1], 1, 0, 0);
 

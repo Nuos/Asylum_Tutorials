@@ -154,45 +154,51 @@ bool InitScene()
 	VulkanCommonVertex* vdata = (VulkanCommonVertex*)vertexbuffer->MapContents(0, 0);
 	float width = 1, height = 1, depth = 1;
 
-	MAKE_COMMONVERTEX(0, width * -0.5f, height * -0.5f, depth * 0.5f, 0, -1, 0, 1, 0);
-	MAKE_COMMONVERTEX(1, width * -0.5f, height * -0.5f, depth * -0.5f, 0, -1, 0, 1, 1);
-	MAKE_COMMONVERTEX(2, width * 0.5f, height * -0.5f, depth * -0.5f, 0, -1, 0, 0, 1);
-	MAKE_COMMONVERTEX(3, width * 0.5f, height * -0.5f, depth * 0.5f, 0, -1, 0, 0, 0);
+	// bottom
+	MAKE_COMMONVERTEX(0, width * -0.5f, height * -0.5f, depth * -0.5f, 0, -1, 0, 1, 0);
+	MAKE_COMMONVERTEX(1, width * -0.5f, height * -0.5f, depth * 0.5f, 0, -1, 0, 1, 1);
+	MAKE_COMMONVERTEX(2, width * 0.5f, height * -0.5f, depth * 0.5f, 0, -1, 0, 0, 1);
+	MAKE_COMMONVERTEX(3, width * 0.5f, height * -0.5f, depth * -0.5f, 0, -1, 0, 0, 0);
 
-	MAKE_COMMONVERTEX(4, width * -0.5f, height * 0.5f, depth * 0.5f, 0, 1, 0, 0, 0);
-	MAKE_COMMONVERTEX(5, width * 0.5f, height * 0.5f, depth * 0.5f, 0, 1, 0, 1, 0);
-	MAKE_COMMONVERTEX(6, width * 0.5f, height * 0.5f, depth * -0.5f, 0, 1, 0, 1, 1);
-	MAKE_COMMONVERTEX(7, width * -0.5f, height * 0.5f, depth * -0.5f, 0, 1, 0, 0, 1);
+	// top
+	MAKE_COMMONVERTEX(4, width * -0.5f, height * 0.5f, depth * -0.5f, 0, 1, 0, 0, 0);
+	MAKE_COMMONVERTEX(5, width * 0.5f, height * 0.5f, depth * -0.5f, 0, 1, 0, 1, 0);
+	MAKE_COMMONVERTEX(6, width * 0.5f, height * 0.5f, depth * 0.5f, 0, 1, 0, 1, 1);
+	MAKE_COMMONVERTEX(7, width * -0.5f, height * 0.5f, depth * 0.5f, 0, 1, 0, 0, 1);
 
-	MAKE_COMMONVERTEX(8, width * -0.5f, height * -0.5f, depth * 0.5f, 0, 0, 1, 0, 0);
-	MAKE_COMMONVERTEX(9, width * 0.5f, height * -0.5f, depth * 0.5f, 0, 0, 1, 1, 0);
-	MAKE_COMMONVERTEX(10, width * 0.5f, height * 0.5f, depth * 0.5f, 0, 0, 1, 1, 1);
-	MAKE_COMMONVERTEX(11, width * -0.5f, height * 0.5f, depth * 0.5f, 0, 0, 1, 0, 1);
+	// back
+	MAKE_COMMONVERTEX(8, width * -0.5f, height * -0.5f, depth * -0.5f, 0, 0, -1, 0, 0);
+	MAKE_COMMONVERTEX(9, width * 0.5f, height * -0.5f, depth * -0.5f, 0, 0, -1, 1, 0);
+	MAKE_COMMONVERTEX(10, width * 0.5f, height * 0.5f, depth * -0.5f, 0, 0, -1, 1, 1);
+	MAKE_COMMONVERTEX(11, width * -0.5f, height * 0.5f, depth * -0.5f, 0, 0, -1, 0, 1);
 
-	MAKE_COMMONVERTEX(12, width * 0.5f, height * -0.5f, depth * 0.5f, 1, 0, 0, 0, 0);
-	MAKE_COMMONVERTEX(13, width * 0.5f, height * -0.5f, depth * -0.5f, 1, 0, 0, 1, 0);
-	MAKE_COMMONVERTEX(14, width * 0.5f, height * 0.5f, depth * -0.5f, 1, 0, 0, 1, 1);
-	MAKE_COMMONVERTEX(15, width * 0.5f, height * 0.5f, depth * 0.5f, 1, 0, 0, 0, 1);
+	// right
+	MAKE_COMMONVERTEX(12, width * 0.5f, height * -0.5f, depth * -0.5f, 1, 0, 0, 0, 0);
+	MAKE_COMMONVERTEX(13, width * 0.5f, height * -0.5f, depth * 0.5f, 1, 0, 0, 1, 0);
+	MAKE_COMMONVERTEX(14, width * 0.5f, height * 0.5f, depth * 0.5f, 1, 0, 0, 1, 1);
+	MAKE_COMMONVERTEX(15, width * 0.5f, height * 0.5f, depth * -0.5f, 1, 0, 0, 0, 1);
 
-	MAKE_COMMONVERTEX(16, width * 0.5f, height * -0.5f, depth * -0.5f, 0, 0, -1, 0, 0);
-	MAKE_COMMONVERTEX(17, width * -0.5f, height * -0.5f, depth * -0.5f, 0, 0, -1, 1, 0);
-	MAKE_COMMONVERTEX(18, width * -0.5f, height * 0.5f, depth * -0.5f, 0, 0, -1, 1, 1);
-	MAKE_COMMONVERTEX(19, width * 0.5f, height * 0.5f, depth * -0.5f, 0, 0, -1, 0, 1);
+	// front
+	MAKE_COMMONVERTEX(16, width * 0.5f, height * -0.5f, depth * 0.5f, 0, 0, 1, 0, 0);
+	MAKE_COMMONVERTEX(17, width * -0.5f, height * -0.5f, depth * 0.5f, 0, 0, 1, 1, 0);
+	MAKE_COMMONVERTEX(18, width * -0.5f, height * 0.5f, depth * 0.5f, 0, 0, 1, 1, 1);
+	MAKE_COMMONVERTEX(19, width * 0.5f, height * 0.5f, depth * 0.5f, 0, 0, 1, 0, 1);
 
-	MAKE_COMMONVERTEX(20, width * -0.5f, height * -0.5f, depth * -0.5f, -1, 0, 0, 0, 0);
-	MAKE_COMMONVERTEX(21, width * -0.5f, height * -0.5f, depth * 0.5f, -1, 0, 0, 1, 0);
-	MAKE_COMMONVERTEX(22, width * -0.5f, height * 0.5f, depth * 0.5f, -1, 0, 0, 1, 1);
-	MAKE_COMMONVERTEX(23, width * -0.5f, height * 0.5f, depth * -0.5f, -1, 0, 0, 0, 1);
+	// left
+	MAKE_COMMONVERTEX(20, width * -0.5f, height * -0.5f, depth * 0.5f, -1, 0, 0, 0, 0);
+	MAKE_COMMONVERTEX(21, width * -0.5f, height * -0.5f, depth * -0.5f, -1, 0, 0, 1, 0);
+	MAKE_COMMONVERTEX(22, width * -0.5f, height * 0.5f, depth * -0.5f, -1, 0, 0, 1, 1);
+	MAKE_COMMONVERTEX(23, width * -0.5f, height * 0.5f, depth * 0.5f, -1, 0, 0, 0, 1);
 
 	vertexbuffer->UnmapContents();
 
 	static const uint16_t indices[36] = {
-		0, 1, 2, 2, 3, 0, 
-		4, 5, 6, 6, 7, 4,
-		8, 9, 10, 10, 11, 8,
-		12, 13, 14, 14, 15, 12,
-		16, 17, 18, 18, 19, 16,
-		20, 21, 22, 22, 23, 20
+		1, 0, 3, 3, 2, 1,
+		5, 4, 7, 7, 6, 5,
+		9, 8, 11, 11, 10, 9,
+		13, 12, 15, 15, 14, 13,
+		17, 16, 19, 19, 18, 17,
+		21, 20, 23, 23, 22, 21
 	};
 
 	uint16_t* idata = (uint16_t*)indexbuffer->MapContents(0, 0);
@@ -336,7 +342,7 @@ void Render(float alpha, float elapsedtime)
 {
 	static float time = 0;
 
-	float eye[3]	= { 0, 0, -2.5f };
+	float eye[3]	= { 0, 0, 2.5f };
 	float look[3]	= { 0, 0, 0 };
 	float up[3]		= { 0, 1, 0 };
 
@@ -346,15 +352,15 @@ void Render(float alpha, float elapsedtime)
 	float tmp2[16];
 
 	// setup transforms
-	VKMatrixLookAtLH(view, eye, look, up);
-	VKMatrixPerspectiveFovLH(proj, (60.0f * 3.14159f) / 180.f,  (float)screenwidth / (float)screenheight, 0.1f, 100.0f);
+	VKMatrixLookAtRH(view, eye, look, up);
+	VKMatrixPerspectiveFovRH(proj, (60.0f * 3.14159f) / 180.f,  (float)screenwidth / (float)screenheight, 0.1f, 100.0f);
 	VKMatrixMultiply(unidata->viewproj, view, proj);
 
 	VKMatrixRotationAxis(tmp1, VKDegreesToRadians(fmodf(time * 20.0f, 360.0f)), 1, 0, 0);
 	VKMatrixRotationAxis(tmp2, VKDegreesToRadians(fmodf(time * 20.0f, 360.0f)), 0, 1, 0);
 	VKMatrixMultiply(unidata->world, tmp1, tmp2);
 
-	VKVec4Set(unidata->lightpos, 6, 3, -10, 1);
+	VKVec4Set(unidata->lightpos, 6, 3, 10, 1);
 	VKVec4Set(unidata->eyepos, eye[0], eye[1], eye[2], 1);
 	VKVec4Set(unidata->color, 1, 1, 1, 1);
 

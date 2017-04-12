@@ -18,7 +18,6 @@ layout (location = 1) out float outDepth;
 void main()
 {
 	vec3 tnorm = texture(sampler1, tex).xyz;
-
 	tnorm = tnorm * 2.0 - vec3(1.0);
 
 	vec3 t = normalize(wtan);

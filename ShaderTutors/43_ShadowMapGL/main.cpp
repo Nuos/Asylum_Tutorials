@@ -62,19 +62,19 @@ bool InitScene()
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_DEPTH_TEST);
 
-	if( !GLCreateMeshFromQM("../media/meshes10/sky.qm", 0, 0, &skymesh) )
+	if( !GLCreateMeshFromQM("../media/meshes10/sky.qm", &skymesh) )
 	{
 		MYERROR("Could not load 'sky'");
 		return false;
 	}
 
-	if( !GLCreateMeshFromQM("../media/meshes10/box.qm", 0, 0, &table) )
+	if( !GLCreateMeshFromQM("../media/meshes10/box.qm", &table) )
 	{
 		MYERROR("Could not load 'sky'");
 		return false;
 	}
 
-	if( !GLCreateMeshFromQM("../media/meshes/angel.qm", 0, 0, &angel) )
+	if( !GLCreateMeshFromQM("../media/meshes/angel.qm", &angel) )
 	{
 		MYERROR("Could not load 'sky'");
 		return false;

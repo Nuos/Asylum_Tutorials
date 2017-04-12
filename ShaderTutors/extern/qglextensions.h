@@ -191,6 +191,8 @@ extern PFNGLBINDVERTEXARRAYPROC						glBindVertexArray;
 extern PFNGLDELETEVERTEXARRAYSPROC					glDeleteVertexArrays;
 extern PFNGLPATCHPARAMETERIPROC						glPatchParameteri;
 extern PFNGLPATCHPARAMETERFVPROC					glPatchParameterfv;
+extern PFNGLCLEARBUFFERFVPROC						glClearBufferfv;
+extern PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC	glGetFramebufferAttachmentParameteriv;
 
 // 4.3
 extern PFNGLDISPATCHCOMPUTEPROC						glDispatchCompute;

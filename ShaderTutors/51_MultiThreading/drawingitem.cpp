@@ -42,7 +42,7 @@ private:
 
 		OpenGLAttributeRange table[] =
 		{
-			{ GLPT_LINELIST, 0, 0, indices.size(), 0, vertices.size() }
+			{ GLPT_LINELIST, 0, 0, indices.size(), 0, vertices.size(), true }
 		};
 
 		float	width			= (float)rendertarget->GetWidth();
