@@ -8,7 +8,7 @@
 //
 // *****************************************************************************************************************************
 
-class NativeContext::FlushPrimitivesTask : public RenderingCore::IRenderingTask
+class NativeContext::FlushPrimitivesTask : public IRenderingTask
 {
 	typedef std::vector<Point4> _vertexlist;
 	typedef std::vector<GLushort> _indexlist;
@@ -171,13 +171,7 @@ NativeContext::NativeContext(DrawingItem* item, DrawingLayer* layer)
 
 NativeContext::~NativeContext()
 {
-	if( flushtask )
-	{
-		FlushPrimitives();
-
-		flushtask->Release();
-		flushtask = 0;
-	}
+	FlushPrimitives();
 
 	if( ownerlayer )
 		ownerlayer->contextguard.Unlock();
@@ -185,10 +179,13 @@ NativeContext::~NativeContext()
 
 void NativeContext::FlushPrimitives()
 {
-	flushtask->SetData(vertices, indices);
+	if( flushtask ) {
+		flushtask->SetData(vertices, indices);
+		flushtask->MarkForDispose();
 
-	GetRenderingCore()->AddTask(flushtask);
-	flushtask->Wait(); //
+		GetRenderingCore()->AddTask(flushtask);
+		flushtask = 0;
+	}
 
 	vertices.clear();
 	indices.clear();
@@ -241,8 +238,7 @@ NativeContext& NativeContext::operator =(const NativeContext& other)
 	if( &other == this )
 		return *this;
 
-	if( flushtask )
-		flushtask->Release();
+	FlushPrimitives();
 
 	flushtask = other.flushtask;
 	owneritem = other.owneritem;
@@ -261,7 +257,7 @@ NativeContext& NativeContext::operator =(const NativeContext& other)
 //
 // *****************************************************************************************************************************
 
-class DrawingLayer::DrawingLayerSetupTask : public RenderingCore::IRenderingTask
+class DrawingLayer::DrawingLayerSetupTask : public IRenderingTask
 {
 private:
 	OpenGLFramebuffer*	rendertarget;
@@ -276,11 +272,11 @@ private:
 	void Execute(IRenderingContext* context)
 	{
 		// NOTE: runs on renderer thread
-		if( !rendertarget )
+		if( !rendertarget || IsMarkedForDispose() )
 		{
 			rendertarget = context->CreateFramebuffer(rtwidth, rtheight);
 
-			rendertarget->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_A8R8G8B8, GL_LINEAR);
+			rendertarget->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_A8B8G8R8, GL_LINEAR);
 			rendertarget->AttachRenderbuffer(GL_DEPTH_STENCIL_ATTACHMENT, GLFMT_D24S8);
 		}
 	}
@@ -295,13 +291,6 @@ public:
 		rtheight		= height;
 	}
 
-	void Setup()
-	{
-		// NOTE: runs on any other thread
-		GetRenderingCore()->AddTask(this);
-		Wait();
-	}
-
 	inline OpenGLFramebuffer* GetRenderTarget() const {
 		return rendertarget;
 	}
@@ -310,14 +299,17 @@ public:
 DrawingLayer::DrawingLayer(int universe, unsigned int width, unsigned int height)
 {
 	owner = 0;
-
 	setuptask = new DrawingLayerSetupTask(universe, width, height);
-	setuptask->Setup();
+	
+	GetRenderingCore()->AddTask(setuptask);
+	GetRenderingCore()->Barrier();
 }
 
 DrawingLayer::~DrawingLayer()
 {
-	setuptask->Release();
+	setuptask->MarkForDispose();
+	GetRenderingCore()->AddTask(setuptask);
+
 	setuptask = 0;
 }
 
@@ -338,7 +330,7 @@ NativeContext DrawingLayer::GetContext()
 //
 // *****************************************************************************************************************************
 
-class DrawingItem::RecomposeLayersTask : public RenderingCore::IRenderingTask
+class DrawingItem::RecomposeLayersTask : public IRenderingTask
 {
 private:
 	DrawingItem*		item;
@@ -355,7 +347,7 @@ private:
 	void Execute(IRenderingContext* context)
 	{
 		// NOTE: runs on renderer thread
-		if( !item )
+		if( !item || IsMarkedForDispose() )
 			return;
 
 		if( !screenquad )
@@ -402,13 +394,6 @@ public:
 		effect		= 0;
 		item		= drawingitem;
 	}
-
-	void Render()
-	{
-		// NOTE: runs on any other thread
-		GetRenderingCore()->AddTask(this);
-		Wait();
-	}
 };
 
 DrawingItem::DrawingItem(int universe, unsigned int width, unsigned int height)
@@ -424,11 +409,14 @@ DrawingItem::DrawingItem(int universe, unsigned int width, unsigned int height)
 
 DrawingItem::~DrawingItem()
 {
-	recomposetask->Release();
+	recomposetask->MarkForDispose();
+	GetRenderingCore()->AddTask(recomposetask);
+
 	recomposetask = 0;
 }
 
 void DrawingItem::RecomposeLayers()
 {
-	recomposetask->Render();
+	GetRenderingCore()->AddTask(recomposetask);
+	GetRenderingCore()->Barrier();
 }

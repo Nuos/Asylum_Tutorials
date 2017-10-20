@@ -16,7 +16,7 @@ class blockingqueue
 	};
 
 private:
-	Guard	guard;
+	mutable Guard	guard;
 	Signal	notempty;
 	node	head;
 	node*	last;

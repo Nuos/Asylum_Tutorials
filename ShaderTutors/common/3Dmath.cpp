@@ -504,6 +504,20 @@ void FUNC_PROTO(Vec3TransformCoord)(float out[3], const float v[3], const float 
 	out[2] = tmp[2] / tmp[3];
 }
 
+void FUNC_PROTO(Vec3TransformCoordTranspose)(float out[3], const float m[16], const float v[3])
+{
+	float tmp[4];
+
+	tmp[0] = v[0] * m[0] + v[1] * m[1] + v[2] * m[2] + m[3];
+	tmp[1] = v[0] * m[4] + v[1] * m[5] + v[2] * m[6] + m[7];
+	tmp[2] = v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11];
+	tmp[3] = v[0] * m[12] + v[1] * m[13] + v[2] * m[14] + m[15];
+
+	out[0] = tmp[0] / tmp[3];
+	out[1] = tmp[1] / tmp[3];
+	out[2] = tmp[2] / tmp[3];
+}
+
 void FUNC_PROTO(Vec4Assign)(float out[4], const float a[4])
 {
 	out[0] = a[0];
@@ -885,77 +899,19 @@ void FUNC_PROTO(MatrixRotationAxis)(float out[16], float angle, float x, float y
 	out[0] = cosa + u[0] * u[0] * (1.0f - cosa);
 	out[4] = u[0] * u[1] * (1.0f - cosa) - u[2] * sina;
 	out[8] = u[0] * u[2] * (1.0f - cosa) + u[1] * sina;
+	out[12] = 0;
 
 	out[1] = u[1] * u[0] * (1.0f - cosa) + u[2] * sina;
 	out[5] = cosa + u[1] * u[1] * (1.0f - cosa);
 	out[9] = u[1] * u[2] * (1.0f - cosa) - u[0] * sina;
-	
+	out[13] = 0;
+
 	out[2] = u[2] * u[0] * (1.0f - cosa) - u[1] * sina;
 	out[6] = u[2] * u[1] * (1.0f - cosa) + u[0] * sina;
 	out[10] = cosa + u[2] * u[2] * (1.0f - cosa);
+	out[14] = 0;
 
 	out[3] = out[7] = out[11] = 0;
-	out[12] = out[13] = out[14] = 0;
-	out[15] = 1;
-}
-
-void FUNC_PROTO(MatrixRotationYawPitchRoll)(float out[16], float yaw, float pitch, float roll)
-{
-	// TODO:
-	float sy = sinf(yaw);
-	float sr = sinf(roll);
-	float sp = sinf(pitch);
-
-	float cy = cosf(yaw);
-	float cr = cosf(roll);
-	float cp = cosf(pitch);
-
-	out[0] = cy * cr;
-	out[1] = sy * sp - cy * sr * cp;
-	out[2] = cy * sr * sp + sy * cp;
-	out[3] = 0;
-	
-	out[4] = sr;
-	out[5] = cr * cp;
-	out[6] = -cr * sp;
-	out[7] = 0;
-	
-	out[8] = -sy * cr;
-	out[9] = sy * sr * cp + cy * sp;
-	out[10] = -sy * sr * sp + cy * cp;
-	out[11] = 0;
-
-	out[12] = out[13] = out[14] = 0;
-	out[15] = 1;
-}
-
-void FUNC_PROTO(MatrixRotationRollPitchYaw)(float out[16], float roll, float pitch, float yaw)
-{
-	// TODO:
-	float sy = sinf(yaw);
-	float sr = sinf(roll);
-	float sp = sinf(pitch);
-
-	float cy = cosf(yaw);
-	float cr = cosf(roll);
-	float cp = cosf(pitch);
-
-	out[0] = cr * cy + sy * sr * sp;
-	out[1] = sr * cp;
-	out[2] = - (cy * sr * sp - sy * cr);
-	out[3] = 0;
-
-	out[4] = sy * cr * sp - sr * cy;
-	out[5] = cr * cp;
-	out[6] = - (sy * sr + cr * sp * cy);
-	out[7] = 0;
-
-	out[8] = - (cp * sy);
-	out[9] = - (-sp);
-	out[10] = cp * cy;
-	out[11] = 0;
-
-	out[12] = out[13] = out[14] = 0;
 	out[15] = 1;
 }
 
@@ -1120,44 +1076,6 @@ void FUNC_PROTO(QuaternionRotationAxis)(float out[4], float x, float y, float z,
 	out[1] = (y / l) * sa;
 	out[2] = (z / l) * sa;
 	out[3] = cosf(ha);
-}
-
-void FUNC_PROTO(QuaternionRotationYawPitchRoll)(float out[4], float yaw, float pitch, float roll)
-{
-	float c[3] = { cosf(roll * 0.5f), cosf(pitch * 0.5f), cosf(yaw * 0.5f) };
-	float s[3] = { sinf(roll * 0.5f), sinf(pitch * 0.5f), sinf(yaw * 0.5f) };
-	
-	out[3] = c[0] * c[1] * c[2] + s[0] * s[1] * s[2];
-	out[0] = c[0] * s[1] * c[2] + s[0] * c[1] * s[2];
-	out[1] = c[0] * c[1] * s[2] - s[0] * s[1] * c[2];
-	out[2] = s[0] * c[1] * c[2] - c[0] * s[1] * s[2];
-}
-
-void FUNC_PROTO(QuaternionForward)(float out[3], const float q[4])
-{
-	out[0] =  2.0f * (q[2] * q[0] + q[3] * q[1]);
-	out[1] = -2.0f * (q[3] * q[0] - q[2] * q[1]);
-	out[2] = (q[2] * q[2] + q[3] * q[3]) - (q[1] * q[1] + q[0] * q[0]);
-	
-	FUNC_PROTO(Vec3Normalize)(out, out);
-}
-
-void FUNC_PROTO(QuaternionRight)(float out[3], const float q[4])
-{
-	out[0] = (q[0] * q[0] + q[3] * q[3]) - (q[2] * q[2] + q[1] * q[1]);
-	out[1] =  2.0f * (q[0] * q[1] + q[2] * q[3]);
-	out[2] = -2.0f * (q[1] * q[3] - q[2] * q[0]);
-	
-	FUNC_PROTO(Vec3Normalize)(out, out);
-}
-
-void FUNC_PROTO(QuaternionUp)(float out[3], const float q[4])
-{
-	out[0] = -2.0f * (q[2] * q[3] - q[0] * q[1]);
-	out[1] = (q[1] * q[1] + q[3] * q[3]) - (q[0] * q[0] + q[2] * q[2]);
-	out[2] = 2.0f * (q[1] * q[2] + q[0] * q[3]);
-	
-	FUNC_PROTO(Vec3Normalize)(out, out);
 }
 
 void FUNC_PROTO(FrustumPlanes)(float out[6][4], const float viewproj[16])

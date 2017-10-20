@@ -2,7 +2,7 @@
 #ifndef _THREAD_H_
 #define _THREAD_H_
 
-#include <windows.h>
+#include <Windows.h>
 #include <vector>
 
 class Guard

@@ -15,7 +15,7 @@ void main()
 	vec2 d = normalize(spos2.xy - spos1.xy);
 	vec2 n = vec2(d.y, -d.x);
 
-	// NOTE: screen space is [-1, 1] which is 2 unit wide
+	// NOTE: screen space is [-1, 1] which is 2 units wide
 	vec4 v1 = spos1 + vec4(n * lineThickness, 0.0, 0.0);
 	vec4 v2 = spos1 - vec4(n * lineThickness, 0.0, 0.0);
 	vec4 v3 = spos2 + vec4(n * lineThickness, 0.0, 0.0);

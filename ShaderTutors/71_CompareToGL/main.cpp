@@ -358,7 +358,7 @@ bool InitScene()
 	// debug text
 	screenquad = new OpenGLScreenQuad();
 
-	GLCreateTexture(800, 256, 1, GLFMT_A8R8G8B8, &text);
+	GLCreateTexture(800, 256, 1, GLFMT_A8B8G8R8, &text);
 	UpdateText();
 
 	if( !GLCreateEffectFromFile("../media/shadersGL/basic2D.vert", 0, "../media/shadersGL/basic2D.frag", &basic2D) )
@@ -434,6 +434,10 @@ void Event_MouseMove(int x, int y, short dx, short dy)
 		debugcamera.OrbitRight(GLDegreesToRadians(dx) * 0.5f);
 		debugcamera.OrbitUp(GLDegreesToRadians(dy) * 0.5f);
 	}
+}
+
+void Event_MouseScroll(int x, int y, short dz)
+{
 }
 
 void Event_MouseDown(int x, int y, unsigned char button)

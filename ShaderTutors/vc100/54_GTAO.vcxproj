@@ -12,7 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\common\3Dmath.cpp" />
-    <ClCompile Include="..\common\basiccamera.cpp" />
     <ClCompile Include="..\common\dds.cpp" />
     <ClCompile Include="..\common\gl4x.cpp" />
     <ClCompile Include="..\54_GTAO\main.cpp" />
@@ -22,7 +21,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\3Dmath.h" />
-    <ClInclude Include="..\common\basiccamera.h" />
     <ClInclude Include="..\common\dds.h" />
     <ClInclude Include="..\common\gl4x.h" />
     <ClInclude Include="..\common\spectatorcamera.h" />

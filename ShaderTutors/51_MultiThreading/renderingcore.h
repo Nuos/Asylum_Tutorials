@@ -8,6 +8,39 @@
 
 #define SAFE_DELETE(x)		if( (x) ) { delete (x); (x) = 0; }
 
+class IRenderingContext;
+
+/**
+ * \brief Abstract task class
+ */
+class IRenderingTask
+{
+private:
+	mutable long disposing;
+
+protected:
+	int		universeid;
+
+public:
+	IRenderingTask(int universe);
+	virtual ~IRenderingTask();
+
+	virtual void Execute(IRenderingContext* context) = 0;
+	virtual void Dispose() = 0;
+
+	inline void MarkForDispose() {
+		_InterlockedExchange(&disposing, 1);
+	}
+
+	inline bool IsMarkedForDispose () const {
+		return (1 == _InterlockedXor(&disposing, 0));
+	}
+
+	inline int GetUniverseID() const {
+		return universeid;
+	}
+};
+
 /**
  * \brief This is what is visible to the public
  *
@@ -50,41 +83,13 @@ class RenderingCore
 public:
 	class PrivateInterface;
 
-	class IRenderingTask
-	{
-		friend class RenderingCore;
-
-	private:
-		bool	disposing;
-
-	protected:
-		Signal	finished;
-		int		universeid;
-
-		virtual ~IRenderingTask();
-
-	public:
-		IRenderingTask(int universe);
-		void Release();
-
-		virtual void Execute(IRenderingContext* context) = 0;
-		virtual void Dispose() = 0;
-
-		inline void Wait() {
-			finished.Wait();
-		}
-
-		inline int GetUniverseID() const {
-			return universeid;
-		}
-	};
-
 	void AddTask(IRenderingTask* task);
 	void Shutdown();
 
 	// these methods always block
 	int CreateUniverse(HDC hdc);
 	void DeleteUniverse(int id);
+	void Barrier();
 
 private:
 	static RenderingCore* _inst;

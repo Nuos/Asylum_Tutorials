@@ -1,4 +1,4 @@
-//*************************************************************************************************************
+
 #include <Windows.h>
 #include <iostream>
 
@@ -214,12 +214,12 @@ bool InitScene()
 		return false;
 	}
 
-	float angles[2] = { -0.25f, 0.7f };
+	float angles[2] = { 0.25f, -0.7f };
 	cameraangle = angles;
 
 	return true;
 }
-//*************************************************************************************************************
+
 void UninitScene()
 {
 	SAFE_DELETE(screenquad);
@@ -244,31 +244,35 @@ void UninitScene()
 
 	GLKillAnyRogueObject();
 }
-//*************************************************************************************************************
+
 void Event_KeyDown(unsigned char keycode)
 {
 }
-//*************************************************************************************************************
+
 void Event_KeyUp(unsigned char keycode)
 {
 }
-//*************************************************************************************************************
+
 void Event_MouseMove(int x, int y, short dx, short dy)
 {
 	mousedx += dx;
 	mousedy += dy;
 }
-//*************************************************************************************************************
+
+void Event_MouseScroll(int x, int y, short dz)
+{
+}
+
 void Event_MouseDown(int x, int y, unsigned char button)
 {
 	mousedown = 1;
 }
-//*************************************************************************************************************
+
 void Event_MouseUp(int x, int y, unsigned char button)
 {
 	mousedown = 0;
 }
-//*************************************************************************************************************
+
 void Update(float delta)
 {
 	cameraangle.prev[0] = cameraangle.curr[0];
@@ -276,8 +280,8 @@ void Update(float delta)
 
 	if( mousedown == 1 )
 	{
-		cameraangle.curr[0] += mousedx * 0.004f;
-		cameraangle.curr[1] += mousedy * 0.004f;
+		cameraangle.curr[0] -= mousedx * 0.004f;
+		cameraangle.curr[1] -= mousedy * 0.004f;
 	}
 
 	// clamp to [-pi, pi]
@@ -287,7 +291,7 @@ void Update(float delta)
 	if( cameraangle.curr[1] <= -1.5f )
 		cameraangle.curr[1] = -1.5f;
 }
-//*************************************************************************************************************
+
 void Render(float alpha, float elapsedtime)
 {
 	float world[16];
@@ -303,7 +307,10 @@ void Render(float alpha, float elapsedtime)
 
 	cameraangle.smooth(orient, alpha);
 
-	GLMatrixRotationRollPitchYaw(view, 0, orient[1], orient[0]);
+	GLMatrixRotationAxis(view, orient[1], 1, 0, 0);
+	GLMatrixRotationAxis(tmp, orient[0], 0, 1, 0);
+	GLMatrixMultiply(view, view, tmp);
+
 	GLVec3Transform(eye, eye, view);
 
 	GLFitToBox(clipplanes[0], clipplanes[1], eye, look, scenebox);
@@ -406,4 +413,3 @@ void Render(float alpha, float elapsedtime)
 	SwapBuffers(hdc);
 	mousedx = mousedy = 0;
 }
-//*************************************************************************************************************

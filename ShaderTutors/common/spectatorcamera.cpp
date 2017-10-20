@@ -141,7 +141,6 @@ void SpectatorCamera::Animate(float alpha)
 	// recalculate view matrix
 	FUNC_PROTO(MatrixRotationAxis)(yaw, smoothedangles[0], 0, 1, 0);
 	FUNC_PROTO(MatrixRotationAxis)(pitch, smoothedangles[1], 1, 0, 0);
-
 	FUNC_PROTO(MatrixMultiply)(view, yaw, pitch);
 
 	view[12] = -(smoothedposition[0] * view[0] + smoothedposition[1] * view[4] + smoothedposition[2] * view[8]);

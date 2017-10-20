@@ -12,34 +12,37 @@ Guard					Win32Window::handlesguard;
 LRESULT WINAPI Win32Window::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	handlesguard.Lock();
-	Win32Window::windowmap::iterator it = Win32Window::handles.find(hWnd);
 
-	if( it == Win32Window::handles.end() )
-	{
-		handlesguard.Unlock();
+	Win32Window::windowmap::iterator it = Win32Window::handles.find(hWnd);
+	Win32Window* window = 0;
+
+	if( it != Win32Window::handles.end() )
+		window = it->second;
+	
+	handlesguard.Unlock();
+
+	if( window == 0 )
 		return DefWindowProc(hWnd, msg, wParam, lParam);
-	}
 
 	switch( msg )
 	{
 	case WM_CLOSE:
 		ShowWindow(hWnd, SW_HIDE);
 
-		if( it->second->CloseCallback )
-			(*it->second->CloseCallback)(it->second);
+		if( window->CloseCallback )
+			(*window->CloseCallback)(window);
 
-		it->second->UninitOpenGL();
+		window->UninitOpenGL();
 		break;
 
 	case WM_DESTROY:
-		handlesguard.Unlock();
 		PostQuitMessage(0);
 
 		return 0;
 	
 	case WM_KEYUP:
-		if( it->second->KeyPressCallback )
-			it->second->KeyPressCallback(it->second, wParam);
+		if( window->KeyPressCallback )
+			window->KeyPressCallback(window, wParam);
 
 		break;
 
@@ -47,39 +50,39 @@ LRESULT WINAPI Win32Window::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
 		short x = (short)(lParam & 0xffff);
 		short y = (short)((lParam >> 16) & 0xffff);
 
-		it->second->mousedx += x - it->second->mousex;
-		it->second->mousedy += y - it->second->mousey;
+		window->mousedx += x - window->mousex;
+		window->mousedy += y - window->mousey;
 
-		it->second->mousex = x;
-		it->second->mousey = y;
+		window->mousex = x;
+		window->mousey = y;
 
-		if( it->second->MouseMoveCallback )
-			it->second->MouseMoveCallback(it->second);
+		if( window->MouseMoveCallback )
+			window->MouseMoveCallback(window);
 
 		} break;
 
 	case WM_LBUTTONDOWN:
-		it->second->mousedown = 1;
+		window->mousedown = 1;
 
-		if( it->second->MouseMoveCallback )
-			it->second->MouseMoveCallback(it->second);
+		if( window->MouseMoveCallback )
+			window->MouseMoveCallback(window);
 
 		break;
 
 	case WM_RBUTTONDOWN:
-		it->second->mousedown = 2;
+		window->mousedown = 2;
 
-		if( it->second->MouseMoveCallback )
-			it->second->MouseMoveCallback(it->second);
+		if( window->MouseMoveCallback )
+			window->MouseMoveCallback(window);
 
 		break;
 
 	case WM_LBUTTONUP:
 	case WM_RBUTTONUP:
-		it->second->mousedown = 0;
+		window->mousedown = 0;
 
-		if( it->second->MouseMoveCallback )
-			it->second->MouseMoveCallback(it->second);
+		if( window->MouseMoveCallback )
+			window->MouseMoveCallback(window);
 
 		break;
 
@@ -87,7 +90,6 @@ LRESULT WINAPI Win32Window::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
 		break;
 	}
 
-	handlesguard.Unlock();
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
@@ -219,6 +221,7 @@ void Win32Window::MessageHook()
 	POINT			p;
 	double			last, current;
 	double			delta, accum = 0;
+	bool			render = true;
 
 	if( CreateCallback )
 		(*CreateCallback)(this);
@@ -262,6 +265,9 @@ void Win32Window::MessageHook()
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
 
+				if( msg.message == WM_CLOSE )
+					render = false;
+
 				if( msg.message == WM_QUIT )
 					break;
 			}
@@ -269,11 +275,11 @@ void Win32Window::MessageHook()
 			if( msg.message == WM_QUIT )
 				break;
 
-			if( UpdateCallback )
+			if( render && UpdateCallback )
 				UpdateCallback(0.1f);
 		}
 
-		if( msg.message != WM_QUIT )
+		if( render && msg.message != WM_QUIT )
 		{
 			if( RenderCallback && glcontextid != -1 )
 				RenderCallback(this, (float)accum / 0.1f, (float)delta);

@@ -7,5 +7,5 @@ uniform mat4 matViewProj;
 
 void main()
 {
-	gl_Position = matViewProj * (matWorld * vec4(my_Position, 1));
+	gl_Position = matViewProj * (matWorld * vec4(my_Position, 1.0));
 }

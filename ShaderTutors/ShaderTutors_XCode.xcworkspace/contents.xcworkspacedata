@@ -3,7 +3,10 @@
    version = "1.0">
    <Group
       location = "container:"
-      name = "OS X">
+      name = "macOS">
+      <FileRef
+         location = "group:xcode_osx/51_DepthBlit.xcodeproj">
+      </FileRef>
       <FileRef
          location = "group:xcode_osx/51_CoreProfileMac.xcodeproj">
       </FileRef>

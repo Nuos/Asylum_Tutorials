@@ -3,17 +3,28 @@
 #define _GLEXT_H_
 
 #include <cassert>
+#include <cstdint>
 #include <map>
 
 #include "../extern/qglextensions.h"
 #include "orderedarray.hpp"
 #include "3Dmath.h"
 
+#ifndef WCHAR
+#	define WCHAR wchar_t
+#endif
+
 #ifdef _DEBUG
 #	define GL_ASSERT(x)	assert(x)
 #else
 #	define GL_ASSERT(x)	if( !(x) ) throw 1
 #endif
+
+#define GL_SAFE_DELETE_BUFFER(x) \
+	if( x ) { \
+		glDeleteBuffers(1, &x); \
+		x = 0; }
+// END
 
 #define GL_SAFE_DELETE_TEXTURE(x) \
 	if( x ) { \
@@ -40,7 +51,7 @@ enum OpenGLDeclUsage
 	GLDECLUSAGE_NORMAL,
 	GLDECLUSAGE_PSIZE,
 	GLDECLUSAGE_TEXCOORD,
-	GLDECLUSAGE_TANGENT,
+	GLDECLUSAGE_TANGENT = GLDECLUSAGE_TEXCOORD + 8,
 	GLDECLUSAGE_BINORMAL,
 	GLDECLUSAGE_TESSFACTOR,
 	GLDECLUSAGE_POSITIONT,
@@ -56,13 +67,21 @@ enum OpenGLFormat
 	GLFMT_R8,
 	GLFMT_R8G8,
 	GLFMT_R8G8B8,
+	GLFMT_R8G8B8_sRGB,
+	GLFMT_B8G8R8,
+	GLFMT_B8G8R8_sRGB,
 	GLFMT_A8R8G8B8,
-	GLFMT_sA8R8G8B8,
+	GLFMT_A8R8G8B8_sRGB,
+	GLFMT_A8B8G8R8,
+	GLFMT_A8B8G8R8_sRGB,
+
 	GLFMT_D24S8,
 	GLFMT_D32F,
 
 	GLFMT_DXT1,
+	GLFMT_DXT1_sRGB,
 	GLFMT_DXT5,
+	GLFMT_DXT5_sRGB,
 
 	GLFMT_R16F,
 	GLFMT_G16R16F,
@@ -224,6 +243,7 @@ public:
 	bool LockVertexBuffer(GLuint offset, GLuint size, GLuint flags, void** data);
 	bool LockIndexBuffer(GLuint offset, GLuint size, GLuint flags, void** data);
 
+	void Draw();
 	void DrawSubset(GLuint subset, bool bindtextures = false);
 	void EnableSubset(GLuint subset, bool enable);
 	void GenerateTangentFrame();
@@ -232,41 +252,18 @@ public:
 	void UnlockIndexBuffer();
 	void SetAttributeTable(const OpenGLAttributeRange* table, GLuint size);
 
-	inline void SetBoundingBox(const OpenGLAABox& box) {
-		boundingbox = box;
-	}
-
-	inline OpenGLAttributeRange* GetAttributeTable() {
-		return subsettable;
-	}
-
-	inline OpenGLMaterial* GetMaterialTable() {
-		return materials;
-	}
-
-	inline const OpenGLAABox& GetBoundingBox() const {
-		return boundingbox;
-	}
-
-	inline size_t GetNumBytesPerVertex() const {
-		return vertexdecl.Stride;
-	}
-
-	inline GLuint GetNumSubsets() const {
-		return numsubsets;
-	}
-
-	inline GLuint GetVertexLayout() const {
-		return vertexlayout;
-	}
-
-	inline GLuint GetVertexBuffer() const {
-		return vertexbuffer;
-	}
-
-	inline GLuint GetIndexBuffer() const {
-		return indexbuffer;
-	}
+	inline void SetBoundingBox(const OpenGLAABox& box)	{ boundingbox = box; }
+	inline OpenGLAttributeRange* GetAttributeTable()	{ return subsettable; }
+	inline OpenGLMaterial* GetMaterialTable()			{ return materials; }
+	inline const OpenGLAABox& GetBoundingBox() const	{ return boundingbox; }
+	inline size_t GetNumBytesPerVertex() const			{ return vertexdecl.Stride; }
+	inline GLuint GetNumSubsets() const					{ return numsubsets; }
+	inline GLuint GetNumVertices() const				{ return numvertices; }
+	inline GLuint GetNumIndices() const					{ return numindices; }
+	inline GLuint GetVertexLayout() const				{ return vertexlayout; }
+	inline GLuint GetVertexBuffer() const				{ return vertexbuffer; }
+	inline GLuint GetIndexBuffer() const				{ return indexbuffer; }
+	inline GLenum GetIndexType() const					{ return ((meshoptions & GLMESH_32BIT) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT); }
 };
 
 /**
@@ -275,9 +272,11 @@ public:
 class OpenGLEffect
 {
 	// this is a bad habit...
+	friend bool GLCreateEffectFromMemory(const char*, const char*, const char*, OpenGLEffect**, const char*);
 	friend bool GLCreateEffectFromFile(const char*, const char*, const char*, OpenGLEffect**, const char*);
 	friend bool GLCreateComputeProgramFromFile(const char*, OpenGLEffect**, const char*);
 	friend bool GLCreateTessellationProgramFromFile(const char*, const char*, const char*, const char*, const char*, OpenGLEffect**);
+	friend bool GLCreateTessellationProgramFromMemory(const char*, const char*, const char*, const char*, const char*, OpenGLEffect**);
 
 	struct Uniform
 	{
@@ -294,21 +293,36 @@ class OpenGLEffect
 		}
 	};
 
-	typedef mystl::orderedarray<Uniform> uniformtable;
+	struct UniformBlock
+	{
+		char			Name[32];
+		GLint			Index;
+		mutable GLint	Binding;
+		GLint			BlockSize;
+
+		inline bool operator <(const UniformBlock& other) const {
+			return (0 > strcmp(Name, other.Name));
+		}
+	};
+
+	typedef mystl::orderedarray<Uniform> UniformTable;
+	typedef mystl::orderedarray<UniformBlock> UniformBlockTable;
 
 private:
-	uniformtable	uniforms;
-	GLuint			program;
-	float*			floatvalues;
-	int*			intvalues;
-	unsigned int	floatcap;
-	unsigned int	floatsize;
-	unsigned int	intcap;
-	unsigned int	intsize;
+	UniformTable		uniforms;
+	UniformBlockTable	uniformblocks;
+	GLuint				program;
+	float*				floatvalues;
+	int*				intvalues;
+	uint32_t			floatcap;
+	uint32_t			floatsize;
+	uint32_t			intcap;
+	uint32_t			intsize;
 
 	OpenGLEffect();
 
 	void AddUniform(const char* name, GLuint location, GLuint count, GLenum type);
+	void AddUniformBlock(const char* name, GLint index, GLint binding, GLint blocksize);
 	void BindAttributes();
 	void Destroy();
 	void QueryUniforms();
@@ -325,6 +339,7 @@ public:
 	void SetFloat(const char* name, float value);
 	void SetFloatArray(const char* name, const float* values, GLsizei count);
 	void SetInt(const char* name, int value);
+	void SetUniformBlockBinding(const char* name, GLint binding);
 };
 
 /**
@@ -332,13 +347,20 @@ public:
  */
 class OpenGLFramebuffer
 {
+	enum AttachmentType
+	{
+		GL_ATTACH_TYPE_RENDERBUFFER = 0,
+		GL_ATTACH_TYPE_TEXTURE,
+		GL_ATTACH_TYPE_CUBETEXTURE
+	};
+
 	struct Attachment
 	{
 		GLuint id;
-		int type;
+		AttachmentType type;
 
 		Attachment()
-			: id(0), type(0) {}
+			: id(0), type(GL_ATTACH_TYPE_RENDERBUFFER) {}
 	};
 
 private:
@@ -403,23 +425,38 @@ public:
 };
 
 // content functions
+GLuint GLCompileShaderFromMemory(GLenum type, const char* code, const char* defines);
+GLuint GLCompileShaderFromFile(GLenum type, const char* file, const char* defines);
+
+bool GLCheckLinkStatus(GLuint program);
 bool GLCreateTexture(GLsizei width, GLsizei height, GLint miplevels, OpenGLFormat format, GLuint* out, void* data = 0);
 bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out, GLuint flags = 0);
-bool GLCreateCubeTextureFromFile(const char* file, GLuint* out);
+bool GLCreateVolumeTextureFromFile(const char* file, bool srgb, GLuint* out);
+bool GLCreateCubeTextureFromFile(const char* file, bool srgb, GLuint* out);
 bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out);
 bool GLCreateMesh(GLuint numvertices, GLuint numindices, GLuint options, OpenGLVertexElement* decl, OpenGLMesh** mesh);
 bool GLCreateMeshFromQM(const char* file, OpenGLMesh** mesh);
 bool GLCreatePlane(float width, float height, float uscale, float vscale, OpenGLMesh** mesh);
 bool GLCreateBox(float width, float height, float depth, float uscale, float vscale, float wscale, OpenGLMesh** mesh);
 bool GLCreateCapsule(float length, float radius, OpenGLMesh** mesh);
+bool GLCreateEffectFromMemory(const char* vscode, const char* gscode, const char* pscode, OpenGLEffect** effect, const char* defines = 0);
 bool GLCreateEffectFromFile(const char* vsfile, const char* gsfile, const char* psfile, OpenGLEffect** effect, const char* defines = 0);
 bool GLCreateComputeProgramFromFile(const char* csfile, OpenGLEffect** effect, const char* defines = 0);
+
 bool GLCreateTessellationProgramFromFile(
 	const char* vsfile,
 	const char* tcfile,
 	const char* tefile,
 	const char* gsfile,
 	const char* psfile,
+	OpenGLEffect** effect);
+
+bool GLCreateTessellationProgramFromMemory(
+	const char* vscode,
+	const char* tccode,
+	const char* tecode,
+	const char* gscode,
+	const char* pscode,
 	OpenGLEffect** effect);
 
 bool GLSaveFP16CubemapToFile(const char* filename, GLuint texture);
@@ -438,5 +475,6 @@ void GLRenderTextEx(
 	float emsize);
 
 void GLSetTexture(GLenum unit, GLenum target, GLuint texture);
+void GLCheckError();
 
 #endif

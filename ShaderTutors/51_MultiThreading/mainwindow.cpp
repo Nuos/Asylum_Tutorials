@@ -3,7 +3,7 @@
 #include "renderingcore.h"
 #include "drawingitem.h"
 
-class OpenGLAddonTask : public RenderingCore::IRenderingTask
+class OpenGLAddonTask : public IRenderingTask
 {
 	enum AddonAction
 	{
@@ -50,7 +50,7 @@ public:
 	}
 };
 
-class RenderTargetBlitTask : public RenderingCore::IRenderingTask
+class RenderTargetBlitTask : public IRenderingTask
 {
 private:
 	OpenGLFramebuffer*	source;
@@ -114,6 +114,9 @@ void OpenGLAddonTask::Dispose()
 
 void OpenGLAddonTask::Execute(IRenderingContext* context)
 {
+	if( IsMarkedForDispose() )
+		return;
+
 	// NOTE: runs on renderer thread
 	if( action == AA_Setup )
 	{
@@ -205,7 +208,7 @@ void OpenGLAddonTask::Setup()
 	action = AA_Setup;
 
 	GetRenderingCore()->AddTask(this);
-	Wait();
+	GetRenderingCore()->Barrier();
 }
 
 void OpenGLAddonTask::Render(float time)
@@ -239,9 +242,12 @@ void MainWindow_Created(Win32Window* window)
 
 void MainWindow_Closing(Win32Window*)
 {
-	if( addonrenderer )
-	{
-		addonrenderer->Release();
+	if( addonrenderer ) {
+		addonrenderer->MarkForDispose();
+		
+		GetRenderingCore()->AddTask(addonrenderer);
+		GetRenderingCore()->Barrier();
+
 		addonrenderer = 0;
 	}
 }
@@ -297,9 +303,12 @@ void Window3_Created(Win32Window* window)
 
 void Window3_Closing(Win32Window*)
 {
-	if( window3renderer )
-	{
-		window3renderer->Release();
+	if( window3renderer ) {
+		window3renderer->MarkForDispose();
+		
+		GetRenderingCore()->AddTask(window3renderer);
+		GetRenderingCore()->Barrier();
+
 		window3renderer = 0;
 	}
 }
@@ -325,8 +334,10 @@ void Window3_Render(Win32Window* window, float alpha, float elapsedtime)
 		RenderTargetBlitTask* blitter = new RenderTargetBlitTask(
 			drawingitem->GetOpenGLUniverseID(), bottomlayer, feedbacklayer, RenderTargetBlitTask::Depth);
 
+		blitter->MarkForDispose();
+
 		GetRenderingCore()->AddTask(blitter);
-		blitter->Release();
+		GetRenderingCore()->Barrier();
 
 		window3renderer->SetRenderTarget(feedbacklayer);
 		window3renderer->SetClearOptions(OpenGLColor(0, 0, 0, 0), false);

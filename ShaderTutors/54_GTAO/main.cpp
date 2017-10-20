@@ -78,11 +78,11 @@ bool InitScene()
 	model->EnableSubset(259, GL_FALSE);
 
 	// create substitute textures
-	GLuint normal = 0xffff7f7f;	// (1, 0.5f, 0.5f)
+	GLuint normal = 0xffff7f7f;	// RGBA (0.5f, 0.5f, 1.0f, 1.0f)
 	OpenGLMaterial* materials = model->GetMaterialTable();
 
 	GLCreateTextureFromFile("../media/textures/vk_logo.jpg", true, &supplytex);
-	GLCreateTexture(1, 1, 1, GLFMT_A8R8G8B8, &supplynormalmap, &normal);
+	GLCreateTexture(1, 1, 1, GLFMT_A8B8G8R8, &supplynormalmap, &normal);
 
 	for( GLuint i = 0; i < model->GetNumSubsets(); ++i )
 	{
@@ -99,7 +99,7 @@ bool InitScene()
 
 	gbuffer = new OpenGLFramebuffer(screenwidth, screenheight);
 
-	gbuffer->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_sA8R8G8B8, GL_NEAREST);		// color
+	gbuffer->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_A8B8G8R8_sRGB, GL_NEAREST);	// color
 	gbuffer->AttachTexture(GL_COLOR_ATTACHMENT1, GLFMT_A16B16G16R16F, GL_NEAREST);	// normals
 	
 	// depth buffers
@@ -232,7 +232,7 @@ bool InitScene()
 
 	if( !GLCreateEffectFromFile("../media/shadersGL/basic2D.vert", 0, "../media/shadersGL/basic2D.frag", &presenteffect) )
 	{
-		MYERROR("Could not load 'gamma correct' shader");
+		MYERROR("Could not load 'basic2D' shader");
 		return false;
 	}
 
@@ -263,7 +263,7 @@ bool InitScene()
 	screenquad = new OpenGLScreenQuad();
 
 	// render text
-	GLCreateTexture(512, 512, 1, GLFMT_A8R8G8B8, &text1);
+	GLCreateTexture(512, 512, 1, GLFMT_A8B8G8R8, &text1);
 
 	GLRenderText(
 		"Use WASD and mouse to move around\n\n1 - Scene only\n2 - Scene with GTAO (multi-bounce)\n3 - GTAO only\n\nB - Toggle spatial/temporal denoiser\nH - Toggle help text",
@@ -332,6 +332,10 @@ void Event_MouseMove(int x, int y, short dx, short dy)
 	camera.Event_MouseMove(dx, dy);
 }
 
+void Event_MouseScroll(int x, int y, short dz)
+{
+}
+
 void Event_MouseDown(int x, int y, unsigned char button)
 {
 	camera.Event_MouseDown(button);
@@ -371,7 +375,7 @@ void RenderModelWithGTAO(const float proj[16], float clip[4], float eye[3])
 	gbuffer->Attach(GL_COLOR_ATTACHMENT2, depthbuffers[currsample % 2], 0);
 	gbuffer->Set();
 	{
-		// AMD bug...
+#ifdef USE_WORKAROUND
 		glDrawBuffer(GL_COLOR_ATTACHMENT0);
 		glClearColor(0.0f, 0.0103f, 0.0707f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -386,11 +390,12 @@ void RenderModelWithGTAO(const float proj[16], float clip[4], float eye[3])
 
 		GLenum buffs[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 		glDrawBuffers(3, buffs);
-
-		//glClearBufferfv(GL_COLOR, GL_DRAW_BUFFER0, ocean);
-		//glClearBufferfv(GL_COLOR, GL_DRAW_BUFFER1, black);
-		//glClearBufferfv(GL_COLOR, GL_DRAW_BUFFER2, white);
-		//glClearBufferfv(GL_DEPTH, 0, white);
+#else
+		glClearBufferfv(GL_COLOR, 0, ocean);
+		glClearBufferfv(GL_COLOR, 1, black);
+		glClearBufferfv(GL_COLOR, 2, white);
+		glClearBufferfv(GL_DEPTH, 0, white);
+#endif
 
 		gbuffereffect->Begin();
 		{

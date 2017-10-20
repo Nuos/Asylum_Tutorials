@@ -5,6 +5,8 @@
 #if defined(USE_VULKAN_PREFIX)
 #include "vkx.h"
 
+#define FORMAT_R8G8B8			VK_FORMAT_B8G8R8_UNORM
+#define FORMAT_B8G8R8			VK_FORMAT_R8G8B8_UNORM
 #define FORMAT_A8R8G8B8			VK_FORMAT_B8G8R8A8_UNORM
 #define FORMAT_DXT1				VK_FORMAT_BC1_RGBA_UNORM_BLOCK
 #define FORMAT_DXT5				VK_FORMAT_BC3_UNORM_BLOCK
@@ -14,6 +16,8 @@
 #else
 #include "gl4x.h"
 
+#define FORMAT_R8G8B8			GLFMT_R8G8B8
+#define FORMAT_B8G8R8			GLFMT_B8G8R8
 #define FORMAT_A8R8G8B8			GLFMT_A8R8G8B8
 #define FORMAT_DXT1				GLFMT_DXT1
 #define FORMAT_DXT5				GLFMT_DXT5
@@ -49,6 +53,7 @@
 
 #define DDSCAPS2_CUBEMAP				0x200
 #define DDSCAPS2_CUBEMAP_POSITIVEX		0x400
+#define DDSCAPS2_VOLUME					0x200000
 
 #ifndef MAKEFOURCC
 #	define MAKEFOURCC(ch0, ch1, ch2, ch3) \
@@ -470,6 +475,29 @@ unsigned int GetCompressedImageSize(unsigned int width, unsigned int height, uns
 	return bytesize;
 }
 
+unsigned int GetCompressedImageSize(unsigned int width, unsigned int height, unsigned int depth, unsigned int miplevels, unsigned int format)
+{
+	unsigned int w = width;
+	unsigned int h = height;
+	unsigned int d = depth;
+	unsigned int bytesize = 0;
+
+	if( format == FORMAT_DXT1 || format == FORMAT_DXT5 )
+	{
+		unsigned int mult = ((format == FORMAT_DXT5) ? 16 : 8);
+
+		for( unsigned int i = 0; i < miplevels; ++i )
+		{
+			bytesize += FUNC_PROTO(Max)<unsigned int>(1, w / 4) * FUNC_PROTO(Max)<unsigned int>(1, h / 4) * d * mult;
+
+			w = FUNC_PROTO(Max)<unsigned int>(w / 2, 1);
+			h = FUNC_PROTO(Max)<unsigned int>(h / 2, 1);
+		}
+	}
+
+	return bytesize;
+}
+
 unsigned int GetCompressedLevelSize(unsigned int width, unsigned int height, unsigned int level, unsigned int format)
 {
 	unsigned int w = width;
@@ -501,6 +529,25 @@ unsigned int GetCompressedLevelSize(unsigned int width, unsigned int height, uns
 				bytesize = w;
 			}
 		}
+	}
+
+	return bytesize;
+}
+
+unsigned int GetCompressedLevelSize(unsigned int width, unsigned int height, unsigned int depth, unsigned int level, unsigned int format)
+{
+	unsigned int w = width;
+	unsigned int h = height;
+	unsigned int bytesize = 0;
+
+	if( format == FORMAT_DXT1 || format == FORMAT_DXT5 )
+	{
+		unsigned int mult = ((format == FORMAT_DXT5) ? 16 : 8);
+
+		w = FUNC_PROTO(Max)<unsigned int>(w / (1 << level), 1);
+		h = FUNC_PROTO(Max)<unsigned int>(h / (1 << level), 1);
+
+		bytesize = FUNC_PROTO(Max)<unsigned int>(1, w / 4) * FUNC_PROTO(Max)<unsigned int>(1, h / 4) * depth * mult;
 	}
 
 	return bytesize;
@@ -560,17 +607,12 @@ bool LoadFromDDS(const char* file, DDS_Image_Info* outinfo)
 
 	outinfo->Width		= header.dwWidth;
 	outinfo->Height		= header.dwHeight;
+	outinfo->Depth		= header.dwDepth;
 	outinfo->Format		= 0;
 	outinfo->MipLevels	= (header.dwMipMapCount == 0 ? 1 : header.dwMipMapCount);
 	outinfo->Data		= 0;
 
-	if( header.ddspf.dwRGBBitCount == 32 )
-		outinfo->Format = FORMAT_A8R8G8B8;
-	else if( header.ddspf.dwRGBBitCount == 0 )
-		goto _fail;
-
-	if( header.ddspf.dwFlags & DDPF_FOURCC )
-	{
+	if( header.ddspf.dwFlags & DDPF_FOURCC ) {
 		if( header.ddspf.dwFourCC == DDSPF_DXT1.dwFourCC )
 			outinfo->Format = FORMAT_DXT1;
 		else if( header.ddspf.dwFourCC == DDSPF_DXT5.dwFourCC )
@@ -583,9 +625,43 @@ bool LoadFromDDS(const char* file, DDS_Image_Info* outinfo)
 			outinfo->Format = FORMAT_G32R32F;
 		else
 			goto _fail; // unsupported
+	} else if( header.ddspf.dwRGBBitCount == 32 ) {
+		outinfo->Format = FORMAT_A8R8G8B8;
+	} else if( header.ddspf.dwRGBBitCount == 24 ) {
+		if( header.ddspf.dwRBitMask & 0x00ff0000 ) {
+			// ARGB (BGRA)
+			outinfo->Format = FORMAT_B8G8R8;
+		} else {
+			// ABGR (RGBA)
+			outinfo->Format = FORMAT_R8G8B8;
+		}
+	} else {
+		goto _fail;
 	}
 
-	if( header.dwCaps2 & DDSCAPS2_CUBEMAP )
+	if( header.dwCaps2 & DDSCAPS2_VOLUME )
+	{
+		if( outinfo->Format == FORMAT_DXT1 || outinfo->Format == FORMAT_DXT5 )
+		{
+			// compressed volume texture
+			bytesize = GetCompressedImageSize(outinfo->Width, outinfo->Height, outinfo->Depth, outinfo->MipLevels, outinfo->Format);
+
+			outinfo->Data = malloc(bytesize);
+			outinfo->DataSize = bytesize;
+
+			fread(outinfo->Data, 1, bytesize, infile);
+		}
+		else
+		{
+			// uncompressed volume texture
+			bytesize = GetImageSize(outinfo->Width, outinfo->Height, (header.ddspf.dwRGBBitCount / 8), outinfo->MipLevels) * outinfo->Depth;
+			outinfo->Data = malloc(bytesize);
+
+			fread((char*)outinfo->Data, 1, bytesize, infile);
+			outinfo->DataSize = bytesize;
+		}
+	}
+	else if( header.dwCaps2 & DDSCAPS2_CUBEMAP )
 	{
 		if( outinfo->Format == FORMAT_DXT1 || outinfo->Format == FORMAT_DXT5 )
 		{

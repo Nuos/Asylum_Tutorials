@@ -157,6 +157,7 @@
 				TargetAttributes = {
 					A600CDF61C50E68F0064DE96 = {
 						CreatedOnToolsVersion = 7.2;
+						DevelopmentTeam = 33TJGE8Y99;
 					};
 				};
 			};
@@ -316,6 +317,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = 33TJGE8Y99;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -332,6 +334,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = 33TJGE8Y99;
 				GCC_PREPROCESSOR_DEFINITIONS = USE_METAL_PREFIX;
 				INFOPLIST_FILE = 70_Metal/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";

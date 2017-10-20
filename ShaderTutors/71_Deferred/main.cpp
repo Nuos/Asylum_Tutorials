@@ -210,7 +210,7 @@ bool InitScene()
 	subpasses[0].preserveAttachmentCount	= 1;
 	subpasses[0].pPreserveAttachments		= &preserve;
 
-	// tonemap renders into color0
+	// tonemap pass renders into color0
 	subpasses[1].pipelineBindPoint			= VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpasses[1].flags						= 0;
 	subpasses[1].inputAttachmentCount		= 1;
@@ -222,6 +222,7 @@ bool InitScene()
 	subpasses[1].preserveAttachmentCount	= 0;
 	subpasses[1].pPreserveAttachments		= NULL;
 
+	// external dependency will create a barrier between the two renderpasses
 	dependencies[0].srcSubpass		= VK_SUBPASS_EXTERNAL;
 	dependencies[0].srcAccessMask	= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 	dependencies[0].srcStageMask	= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;

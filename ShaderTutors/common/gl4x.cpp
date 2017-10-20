@@ -3,17 +3,20 @@
 #include "dds.h"
 
 #include <iostream>
-#include <map>
-#include <string>
-#include <cstdio>
-#include <cmath>
-#include <GdiPlus.h>
+#include <vector>
+#include <algorithm>
+
+#ifdef _WIN32
+#	include <GdiPlus.h>
+#endif
 
 #ifdef _MSC_VER
 #	pragma warning (disable:4996)
 #endif
 
+#ifdef _WIN32
 ULONG_PTR gdiplustoken = 0;
+#endif
 
 GLint map_Format_Internal[] =
 {
@@ -21,12 +24,22 @@ GLint map_Format_Internal[] =
 	GL_R8,
 	GL_RG8,
 	GL_RGB8,
+	GL_SRGB8,
+	GL_RGB8,
+	GL_SRGB8,
 	GL_RGBA8,
 	GL_SRGB8_ALPHA8,
-	GL_DEPTH_STENCIL,
-	GL_DEPTH_COMPONENT,
+	GL_RGBA8,
+	GL_SRGB8_ALPHA8,
+
+	GL_DEPTH24_STENCIL8,
+	GL_DEPTH_COMPONENT32F,
+
 	GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
+	GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
 	GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,
+	GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT,
+
 	GL_R16F,
 	GL_RG16F,
 	GL_RGBA16F_ARB,
@@ -41,12 +54,22 @@ GLenum map_Format_Format[] =
 	GL_RED,
 	GL_RG,
 	GL_RGB,
+	GL_RGB,
+	GL_BGR,
+	GL_BGR,
 	GL_RGBA,
 	GL_RGBA,
+	GL_BGRA,
+	GL_BGRA,
+
 	GL_DEPTH_STENCIL,
 	GL_DEPTH_COMPONENT,
+
 	GL_RGBA,
 	GL_RGBA,
+	GL_RGBA,
+	GL_RGBA,
+
 	GL_RED,
 	GL_RG,
 	GL_RGBA,
@@ -61,12 +84,22 @@ GLenum map_Format_Type[] =
 	GL_UNSIGNED_BYTE,
 	GL_UNSIGNED_BYTE,
 	GL_UNSIGNED_BYTE,
-	GL_UNSIGNED_INT_8_8_8_8_REV,
 	GL_UNSIGNED_BYTE,
+	GL_UNSIGNED_BYTE,
+	GL_UNSIGNED_BYTE,
+	GL_UNSIGNED_BYTE,
+	GL_UNSIGNED_BYTE,
+	GL_UNSIGNED_BYTE,
+	GL_UNSIGNED_BYTE,
+
 	GL_UNSIGNED_INT_24_8,
-	GL_UNSIGNED_BYTE,
-	GL_UNSIGNED_BYTE,
 	GL_FLOAT,
+
+	GL_UNSIGNED_BYTE,
+	GL_UNSIGNED_BYTE,
+	GL_UNSIGNED_BYTE,
+	GL_UNSIGNED_BYTE,
+
 	GL_HALF_FLOAT,
 	GL_HALF_FLOAT,
 	GL_HALF_FLOAT,
@@ -90,6 +123,7 @@ static void GLReadString(FILE* f, char* buff)
 	buff[ind] = '\0';
 }
 
+#ifdef _WIN32
 static Gdiplus::Bitmap* Win32LoadPicture(const std::wstring& file)
 {
 	if( gdiplustoken == 0 )
@@ -107,6 +141,7 @@ static Gdiplus::Bitmap* Win32LoadPicture(const std::wstring& file)
 
 	return bitmap;
 }
+#endif
 
 OpenGLMaterial::OpenGLMaterial()
 {
@@ -352,7 +387,6 @@ void OpenGLMesh::RecreateVertexLayout()
 	glBindVertexArray(vertexlayout);
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
 
 		// bind locations
 		for( int i = 0; i < 16; ++i ) {
@@ -429,7 +463,7 @@ bool OpenGLMesh::LockVertexBuffer(GLuint offset, GLuint size, GLuint flags, void
 
 bool OpenGLMesh::LockIndexBuffer(GLuint offset, GLuint size, GLuint flags, void** data)
 {
-	size_t istride = ((meshoptions & GLMESH_32BIT) ? 4 : 2);
+	GLuint istride = ((meshoptions & GLMESH_32BIT) ? 4 : 2);
 
 	if( offset >= numindices * istride )
 	{
@@ -453,6 +487,12 @@ bool OpenGLMesh::LockIndexBuffer(GLuint offset, GLuint size, GLuint flags, void*
 
 	(*data) = indexdata_locked.ptr;
 	return true;
+}
+
+void OpenGLMesh::Draw()
+{
+	for( GLuint i = 0; i < numsubsets; ++i )
+		DrawSubset(i);
 }
 
 void OpenGLMesh::DrawSubset(GLuint subset, bool bindtextures)
@@ -487,6 +527,7 @@ void OpenGLMesh::DrawSubset(GLuint subset, bool bindtextures)
 		}
 
 		glBindVertexArray(vertexlayout);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
 
 		if( attr.IndexCount == 0 )
 			glDrawArrays(attr.PrimitiveType, attr.VertexStart, attr.VertexCount);
@@ -510,13 +551,13 @@ void OpenGLMesh::GenerateTangentFrame()
 {
 	GL_ASSERT(vertexdecl.Stride == sizeof(OpenGLCommonVertex));
 	GL_ASSERT(vertexbuffer != 0);
-	GL_ASSERT((meshoptions & GLMESH_32BIT) == GLMESH_32BIT);
 
 	OpenGLCommonVertex*	oldvdata	= 0;
 	OpenGLTBNVertex*	newvdata	= 0;
-	uint32_t*			idata		= 0;
+	void*				idata		= 0;
 	GLuint				newbuffer	= 0;
 	uint32_t			i1, i2, i3;
+	bool				is32bit		= ((meshoptions & GLMESH_32BIT) == GLMESH_32BIT);
 
 	GL_ASSERT(LockVertexBuffer(0, 0, GLLOCK_READONLY, (void**)&oldvdata));
 	GL_ASSERT(LockIndexBuffer(0, 0, GLLOCK_READONLY, (void**)&idata));
@@ -529,7 +570,10 @@ void OpenGLMesh::GenerateTangentFrame()
 
 		OpenGLCommonVertex*	oldsubsetdata	= (oldvdata + subset.VertexStart);
 		OpenGLTBNVertex*	newsubsetdata	= (newvdata + subset.VertexStart);
-		uint32_t*			subsetidata		= (idata + subset.IndexStart);
+		void*				subsetidata		= ((uint16_t*)idata + subset.IndexStart);
+
+		if( is32bit )
+			subsetidata = ((uint32_t*)idata + subset.IndexStart);
 
 		// initialize new data
 		for( uint32_t j = 0; j < subset.VertexCount; ++j ) {
@@ -547,9 +591,15 @@ void OpenGLMesh::GenerateTangentFrame()
 		}
 
 		for( uint32_t j = 0; j < subset.IndexCount; j += 3 ) {
-			i1 = *(subsetidata + j + 0) - subset.VertexStart;
-			i2 = *(subsetidata + j + 1) - subset.VertexStart;
-			i3 = *(subsetidata + j + 2) - subset.VertexStart;
+			if( is32bit ) {
+				i1 = *((uint32_t*)subsetidata + j + 0) - subset.VertexStart;
+				i2 = *((uint32_t*)subsetidata + j + 1) - subset.VertexStart;
+				i3 = *((uint32_t*)subsetidata + j + 2) - subset.VertexStart;
+			} else {
+				i1 = *((uint16_t*)subsetidata + j + 0) - subset.VertexStart;
+				i2 = *((uint16_t*)subsetidata + j + 1) - subset.VertexStart;
+				i3 = *((uint16_t*)subsetidata + j + 2) - subset.VertexStart;
+			}
 
 			AccumulateTangentFrame(newsubsetdata, i1, i2, i3);
 		}
@@ -631,7 +681,9 @@ void OpenGLMesh::UnlockVertexBuffer()
 {
 	if( vertexdata_locked.ptr && vertexbuffer != 0 )
 	{
+		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 		glUnmapBuffer(GL_ARRAY_BUFFER);
+
 		vertexdata_locked.ptr = 0;
 	}
 }
@@ -640,7 +692,9 @@ void OpenGLMesh::UnlockIndexBuffer()
 {
 	if( indexdata_locked.ptr && indexbuffer != 0 )
 	{
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
 		glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+
 		indexdata_locked.ptr = 0;
 	}
 }
@@ -718,7 +772,7 @@ void OpenGLEffect::AddUniform(const char* name, GLuint location, GLuint count, G
 
 		if( floatsize + count > floatcap )
 		{
-			unsigned int newcap = max(floatsize + count, floatsize + 8);
+			uint32_t newcap = std::max<uint32_t>(floatsize + count, floatsize + 8);
 
 			floatvalues = (float*)realloc(floatvalues, newcap * 4 * sizeof(float));
 			floatcap = newcap;
@@ -739,7 +793,7 @@ void OpenGLEffect::AddUniform(const char* name, GLuint location, GLuint count, G
 
 		if( intsize + count > intcap )
 		{
-			unsigned int newcap = max(intsize + count, intsize + 8);
+			uint32_t newcap = std::max<uint32_t>(intsize + count, intsize + 8);
 
 			intvalues = (int*)realloc(intvalues, newcap * 4 * sizeof(int));
 			intcap = newcap;
@@ -755,6 +809,18 @@ void OpenGLEffect::AddUniform(const char* name, GLuint location, GLuint count, G
 		throw 1;
 
 	uniforms.insert(uni);
+}
+
+void OpenGLEffect::AddUniformBlock(const char* name, GLint index, GLint binding, GLint blocksize)
+{
+	UniformBlock block;
+
+	block.Index = index;
+	block.Binding = binding;
+	block.BlockSize = blocksize;
+
+	strcpy(block.Name, name);
+	uniformblocks.insert(block);
 }
 
 void OpenGLEffect::BindAttributes()
@@ -789,17 +855,17 @@ void OpenGLEffect::BindAttributes()
 	for( int i = 0; i < count; ++i )
 	{
 		memset(attribname, 0, sizeof(attribname));
-
 		glGetActiveAttrib(program, i, 256, NULL, &size, &type, attribname);
+
+		if( attribname[0] == 'g' && attribname[1] == 'l' )
+			continue;
+
 		loc = glGetAttribLocation(program, attribname);
 
 		semanticmap::iterator it = attribmap.find(qstring(attribname));
 
 		if( loc == -1 || it == attribmap.end() )
-		{
-			std::cout <<
-				"Invalid attribute found. Use the my_<semantic> syntax!\n";
-		}
+			std::cout << "Invalid attribute found. Use the my_<semantic> syntax!\n";
 		else
 			glBindAttribLocation(program, it->second, attribname);
 	}
@@ -837,26 +903,58 @@ void OpenGLEffect::QueryUniforms()
 	memset(uniname, 0, sizeof(uniname));
 	uniforms.clear();
 
-	glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &count);
+	glGetProgramiv(program, GL_ACTIVE_UNIFORM_BLOCKS, &count);
 
-	// uniforms
-	for( int i = 0; i < count; ++i )
+	if( count > 0 )
 	{
-		memset(uniname, 0, sizeof(uniname));
+		// uniform blocks
+		std::vector<std::string> blocknames;
+		blocknames.reserve(count);
 
-		glGetActiveUniform(program, i, 256, &length, &size, &type, uniname);
-		loc = glGetUniformLocation(program, uniname);
-
-		for( int j = 0; j < length; ++j )
+		for( int i = 0; i < count; ++i )
 		{
-			if( uniname[j] == '[' )
-				uniname[j] = '\0';
+			GLsizei namelength = 0;
+			char name[64];
+
+			glGetActiveUniformBlockName (program, i, 64, &namelength, name);
+			assert(namelength < 64);
+
+			name[namelength] = 0;
+			blocknames.push_back(name);
 		}
 
-		if( loc == -1 )
-			continue;
+		for( size_t i = 0; i < blocknames.size(); ++i )
+		{
+			GLint blocksize = 0;
+			GLint index = glGetUniformBlockIndex(program, blocknames[i].c_str());
 
-		AddUniform(uniname, loc, size, type);
+			glGetActiveUniformBlockiv (program, (GLuint)i, GL_UNIFORM_BLOCK_DATA_SIZE, &blocksize);
+			AddUniformBlock(blocknames[i].c_str(), index, INT_MAX, blocksize);
+		}
+	}
+	else
+	{
+		glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &count);
+
+		// uniforms
+		for( int i = 0; i < count; ++i )
+		{
+			memset(uniname, 0, sizeof(uniname));
+
+			glGetActiveUniform(program, i, 256, &length, &size, &type, uniname);
+			loc = glGetUniformLocation(program, uniname);
+
+			for( int j = 0; j < length; ++j )
+			{
+				if( uniname[j] == '[' )
+					uniname[j] = '\0';
+			}
+
+			if( loc == -1 )
+				continue;
+
+			AddUniform(uniname, loc, size, type);
+		}
 	}
 }
 
@@ -1014,6 +1112,21 @@ void OpenGLEffect::SetInt(const char* name, int value)
 	}
 }
 
+void OpenGLEffect::SetUniformBlockBinding(const char* name, GLint binding)
+{
+	UniformBlock temp;
+	strcpy(temp.Name, name);
+
+	size_t pos = uniformblocks.find(temp);
+
+	if( pos != UniformBlockTable::npos ) {
+		const UniformBlock& block = uniformblocks[pos];
+
+		block.Binding = binding;
+		glUniformBlockBinding(program, block.Index, binding);
+	}
+}
+
 // *****************************************************************************************************************************
 //
 // OpenGLFrameBuffer impl
@@ -1087,7 +1200,7 @@ bool OpenGLFramebuffer::AttachRenderbuffer(GLenum target, OpenGLFormat format, G
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	attach->type = 0;
+	attach->type = GL_ATTACH_TYPE_RENDERBUFFER;
 
 	return true;
 }
@@ -1143,7 +1256,7 @@ bool OpenGLFramebuffer::AttachCubeTexture(GLenum target, OpenGLFormat format, GL
 	glFramebufferTexture2D(GL_FRAMEBUFFER, target, GL_TEXTURE_CUBE_MAP_POSITIVE_X, attach->id, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	attach->type = 2;
+	attach->type = GL_ATTACH_TYPE_CUBETEXTURE;
 
 	return true;
 }
@@ -1182,7 +1295,7 @@ bool OpenGLFramebuffer::AttachTexture(GLenum target, OpenGLFormat format, GLenum
 	glFramebufferTexture2D(GL_FRAMEBUFFER, target, GL_TEXTURE_2D, attach->id, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	attach->type = 1;
+	attach->type = GL_ATTACH_TYPE_TEXTURE;
 
 	return true;
 }
@@ -1229,10 +1342,10 @@ void OpenGLFramebuffer::Attach(GLenum target, GLuint tex, GLint level)
 	else
 		attach = &rendertargets[target - GL_COLOR_ATTACHMENT0];
 
-	if( attach->id == tex )
-		return;
+	// possible leak
+	//GL_ASSERT(attach->id == tex || attach->id == 0);
 
-	attach->type = 1;
+	attach->type = GL_ATTACH_TYPE_TEXTURE;
 	attach->id = tex;
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fboid);
@@ -1254,8 +1367,11 @@ void OpenGLFramebuffer::Reattach(GLenum target, GLint level)
 	else
 		attach = &rendertargets[target - GL_COLOR_ATTACHMENT0];
 
-	if( attach->type != 1 )
+	if( attach->type != GL_ATTACH_TYPE_TEXTURE )
 		return;
+
+	GL_ASSERT(attach->type == GL_ATTACH_TYPE_TEXTURE);
+	GL_ASSERT(attach->id != 0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fboid);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, target, GL_TEXTURE_2D, attach->id, level);
@@ -1270,8 +1386,8 @@ void OpenGLFramebuffer::Reattach(GLenum target, GLint face, GLint level)
 	else
 		attach = &rendertargets[target - GL_COLOR_ATTACHMENT0];
 
-	if( attach->type != 2 )
-		return;
+	GL_ASSERT(attach->type == GL_ATTACH_TYPE_CUBETEXTURE);
+	GL_ASSERT(attach->id != 0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fboid);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, target, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, attach->id, level);
@@ -1280,10 +1396,33 @@ void OpenGLFramebuffer::Reattach(GLenum target, GLint face, GLint level)
 void OpenGLFramebuffer::Resolve(OpenGLFramebuffer* to, GLbitfield mask)
 {
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, fboid);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, to->fboid);
+
+	// if to == NULL then resolve to screen
+	if( to )
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, to->fboid);
+	else
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+	if( mask & GL_COLOR_BUFFER_BIT )
+	{
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		glDrawBuffer((to == 0) ? GL_BACK : GL_COLOR_ATTACHMENT0);
+	}
 
 	GLenum filter = ((mask & (GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT)) ? GL_NEAREST : GL_LINEAR);
-	glBlitFramebuffer(0, 0, sizex, sizey, 0, 0, to->sizex, to->sizey, mask, filter);
+
+	if( to )
+		glBlitFramebuffer(0, 0, sizex, sizey, 0, 0, to->sizex, to->sizey, mask, filter);
+	else
+		glBlitFramebuffer(0, 0, sizex, sizey, 0, 0, sizex, sizey, mask, filter);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	if( mask & GL_COLOR_BUFFER_BIT )
+	{
+		glReadBuffer(GL_BACK);
+		glDrawBuffer(GL_BACK);
+	}
 }
 
 void OpenGLFramebuffer::Set()
@@ -1394,7 +1533,6 @@ bool GLCreateMesh(GLuint numvertices, GLuint numindices, GLuint options, OpenGLV
 	}
 
 	glGenBuffers(1, &glmesh->vertexbuffer);
-	glGenBuffers(1, &glmesh->indexbuffer);
 
 	if( numvertices >= 0xffff )
 		options |= GLMESH_32BIT;
@@ -1421,17 +1559,20 @@ bool GLCreateMesh(GLuint numvertices, GLuint numindices, GLuint options, OpenGLV
 	GL_ASSERT(glmesh->vertexdecl.Stride != 0);
 
 	// allocate storage
-	glBindBuffer(GL_ARRAY_BUFFER, glmesh->vertexbuffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glmesh->indexbuffer);
-
 	GLenum usage = ((options & GLMESH_DYNAMIC) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
 	GLuint istride = ((options & GLMESH_32BIT) ? 4 : 2);
 
+	glBindBuffer(GL_ARRAY_BUFFER, glmesh->vertexbuffer);
 	glBufferData(GL_ARRAY_BUFFER, numvertices * glmesh->vertexdecl.Stride, 0, usage);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, numindices * istride, 0, usage);
-
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	if( numindices > 0 ) {
+		glGenBuffers(1, &glmesh->indexbuffer);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glmesh->indexbuffer);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, numindices * istride, 0, usage);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	}
 
 	(*mesh) = glmesh;
 	return true;
@@ -1439,7 +1580,7 @@ bool GLCreateMesh(GLuint numvertices, GLuint numindices, GLuint options, OpenGLV
 
 bool GLCreateMeshFromQM(const char* file, OpenGLMesh** mesh)
 {
-	static const unsigned char usages[] =
+	static const uint8_t usages[] =
 	{
 		GLDECLUSAGE_POSITION,
 		GLDECLUSAGE_POSITIONT,
@@ -1454,12 +1595,12 @@ bool GLCreateMeshFromQM(const char* file, OpenGLMesh** mesh)
 		GLDECLUSAGE_TESSFACTOR
 	};
 
-	static const unsigned short elemsizes[6] =
+	static const uint16_t elemsizes[6] =
 	{
 		1, 2, 3, 4, 4, 4
 	};
 
-	static const unsigned short elemstrides[6] =
+	static const uint16_t elemstrides[6] =
 	{
 		4, 4, 4, 4, 1, 1
 	};
@@ -1475,16 +1616,16 @@ bool GLCreateMeshFromQM(const char* file, OpenGLMesh** mesh)
 	FILE*					infile = 0;
 	float					bbmin[3];
 	float					bbmax[3];
-	unsigned int			unused;
-	unsigned int			version;
-	unsigned int			numindices;
-	unsigned int			numvertices;
-	unsigned int			vstride;
-	unsigned int			istride;
-	unsigned int			numsubsets;
-	unsigned int			numelems;
-	unsigned short			tmp16;
-	unsigned char			tmp8;
+	uint32_t				unused;
+	uint32_t				version;
+	uint32_t				numindices;
+	uint32_t				numvertices;
+	uint32_t				vstride;
+	uint32_t				istride;
+	uint32_t				numsubsets;
+	uint32_t				numelems;
+	uint16_t				tmp16;
+	uint8_t					tmp8;
 	void*					data = 0;
 	char					buff[256];
 	bool					success;
@@ -1520,7 +1661,7 @@ bool GLCreateMeshFromQM(const char* file, OpenGLMesh** mesh)
 
 	vstride = 0;
 
-	for( unsigned int i = 0; i < numelems; ++i )
+	for( uint32_t i = 0; i < numelems; ++i )
 	{
 		fread(&tmp16, 2, 1, infile);
 		decl[i].Stream = tmp16;
@@ -1569,7 +1710,7 @@ bool GLCreateMeshFromQM(const char* file, OpenGLMesh** mesh)
 	// attribute table
 	(*mesh)->materials = new OpenGLMaterial[numsubsets];
 
-	for( unsigned int i = 0; i < numsubsets; ++i )
+	for( uint32_t i = 0; i < numsubsets; ++i )
 	{
 		OpenGLAttributeRange& subset = table[i];
 		mat = ((*mesh)->materials + i);
@@ -1706,7 +1847,7 @@ bool GLCreatePlane(float width, float height, float uscale, float vscale, OpenGL
 
 	OpenGLAttributeRange table[] =
 	{
-		{ GLPT_TRIANGLELIST, 0, 0, 6, 0, 4 }
+		{ GLPT_TRIANGLELIST, 0, 0, 6, 0, 4, GL_TRUE }
 	};
 
 	if( !GLCreateMesh(4, 6, 0, decl, mesh) )
@@ -1759,7 +1900,7 @@ bool GLCreateBox(float width, float height, float depth, float uscale, float vsc
 
 	OpenGLAttributeRange table[] =
 	{
-		{ GLPT_TRIANGLELIST, 0, 0, 36, 0, 24 }
+		{ GLPT_TRIANGLELIST, 0, 0, 36, 0, 24, GL_TRUE }
 	};
 
 	if( !GLCreateMesh(24, 36, 0, decl, mesh) )
@@ -1862,7 +2003,7 @@ bool GLCreateCapsule(float length, float radius, OpenGLMesh** mesh)
 
 	OpenGLAttributeRange table[] =
 	{
-		{ GLPT_TRIANGLELIST, 0, 0, numindices, 0, numvertices }
+		{ GLPT_TRIANGLELIST, 0, 0, numindices, 0, numvertices, GL_TRUE }
 	};
 
 	if( !GLCreateMesh(numvertices, numindices, 0, decl, mesh) )
@@ -1983,7 +2124,55 @@ bool GLCreateCapsule(float length, float radius, OpenGLMesh** mesh)
 	return true;
 }
 
-static GLuint GLCompileShader(GLenum type, const char* file, const char* defines)
+GLuint GLCompileShaderFromMemory(GLenum type, const char* code, const char* defines)
+{
+	std::string	source;
+	char		log[1024];
+	size_t		pos;
+	GLuint		shader = 0;
+	GLint		length = (GLint)strlen(code);
+	GLint		success;
+	GLint		deflength = 0;
+
+	if( defines )
+		deflength = (GLint)strlen(defines);
+
+	source.reserve(length + deflength);
+	source = code;
+
+	// add defines
+	if( defines )
+	{
+		pos = source.find("#version");
+		pos = source.find('\n', pos) + 1;
+
+		source.insert(pos, defines);
+	}
+
+	shader = glCreateShader(type);
+	length = (GLint)source.length();
+
+	const GLcharARB* sourcedata = (const GLcharARB*)source.data();
+
+	glShaderSource(shader, 1, &sourcedata, &length);
+	glCompileShader(shader);
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+
+	if( success != GL_TRUE )
+	{
+		glGetShaderInfoLog(shader, 1024, &length, log);
+		log[length] = 0;
+
+		std::cout << log << "\n";
+		glDeleteShader(shader);
+
+		return 0;
+	}
+
+	return shader;
+}
+
+GLuint GLCompileShaderFromFile(GLenum type, const char* file, const char* defines)
 {
 	std::string	source;
 	char		log[1024];
@@ -1992,7 +2181,7 @@ static GLuint GLCompileShader(GLenum type, const char* file, const char* defines
 	GLuint		shader = 0;
 	GLint		length;
 	GLint		success;
-	int			deflength = 0;
+	GLint		deflength = 0;
 
 	if( !file )
 		return 0;
@@ -2005,7 +2194,7 @@ static GLuint GLCompileShader(GLenum type, const char* file, const char* defines
 	fseek(infile, 0, SEEK_SET);
 
 	if( defines )
-		deflength = strlen(defines);
+		deflength = (GLint)strlen(defines);
 
 	source.reserve(length + deflength);
 	source.resize(length);
@@ -2057,7 +2246,7 @@ static GLuint GLCompileShader(GLenum type, const char* file, const char* defines
 	}
 
 	shader = glCreateShader(type);
-	length = source.length();
+	length = (GLint)source.length();
 
 	const GLcharARB* sourcedata = (const GLcharARB*)source.data();
 
@@ -2079,28 +2268,45 @@ static GLuint GLCompileShader(GLenum type, const char* file, const char* defines
 	return shader;
 }
 
-bool GLCreateEffectFromFile(const char* vsfile, const char* gsfile, const char* psfile, OpenGLEffect** effect, const char* defines)
+bool GLCheckLinkStatus(GLuint program)
 {
 	char			log[1024];
+	GLint			success;
+	GLint			length;
+
+	glGetProgramiv(program, GL_LINK_STATUS, &success);
+
+	if( success != GL_TRUE )
+	{
+		glGetProgramInfoLog(program, 1024, &length, log);
+		log[length] = 0;
+
+		std::cout << log << "\n";
+		return false;
+	}
+
+	return true;
+}
+
+bool GLCreateEffectFromMemory(const char* vscode, const char* gscode, const char* pscode, OpenGLEffect** effect, const char* defines)
+{
 	OpenGLEffect*	neweffect;
 	GLuint			vertexshader = 0;
 	GLuint			fragmentshader = 0;
 	GLuint			geometryshader = 0;
-	GLint			success;
-	GLint			length;
 
-	if( 0 == (vertexshader = GLCompileShader(GL_VERTEX_SHADER, vsfile, defines)) )
+	if( 0 == (vertexshader = GLCompileShaderFromMemory(GL_VERTEX_SHADER, vscode, defines)) )
 		return false;
 
-	if( 0 == (fragmentshader = GLCompileShader(GL_FRAGMENT_SHADER, psfile, defines)) )
+	if( 0 == (fragmentshader = GLCompileShaderFromMemory(GL_FRAGMENT_SHADER, pscode, defines)) )
 	{
 		glDeleteShader(vertexshader);
 		return false;
 	}
 
-	if( gsfile )
+	if( gscode )
 	{
-		if( 0 == (geometryshader = GLCompileShader(GL_GEOMETRY_SHADER, gsfile, defines)) )
+		if( 0 == (geometryshader = GLCompileShaderFromMemory(GL_GEOMETRY_SHADER, gscode, defines)) )
 		{
 			glDeleteShader(vertexshader);
 			glDeleteShader(fragmentshader);
@@ -2115,24 +2321,22 @@ bool GLCreateEffectFromFile(const char* vsfile, const char* gsfile, const char* 
 	glAttachShader(neweffect->program, vertexshader);
 	glAttachShader(neweffect->program, fragmentshader);
 
-	if( geometryshader )
+	if( geometryshader != 0 )
 		glAttachShader(neweffect->program, geometryshader);
 
 	glLinkProgram(neweffect->program);
-	glGetProgramiv(neweffect->program, GL_LINK_STATUS, &success);
 
-	if( success != GL_TRUE )
+	if( !GLCheckLinkStatus(neweffect->program) )
 	{
-		glGetProgramInfoLog(neweffect->program, 1024, &length, log);
-		log[length] = 0;
-
-		std::cout << log << "\n";
-
 		glDeleteShader(vertexshader);
 		glDeleteShader(fragmentshader);
-		glDeleteProgram(neweffect->program);
 
+		if( geometryshader != 0 )
+			glDeleteShader(geometryshader);
+
+		glDeleteProgram(neweffect->program);
 		delete neweffect;
+
 		return false;
 	}
 
@@ -2141,6 +2345,74 @@ bool GLCreateEffectFromFile(const char* vsfile, const char* gsfile, const char* 
 
 	glDeleteShader(vertexshader);
 	glDeleteShader(fragmentshader);
+
+	if( geometryshader != 0 )
+		glDeleteShader(geometryshader);
+
+	(*effect) = neweffect;
+	return true;
+}
+
+bool GLCreateEffectFromFile(const char* vsfile, const char* gsfile, const char* psfile, OpenGLEffect** effect, const char* defines)
+{
+	OpenGLEffect*	neweffect;
+	GLuint			vertexshader = 0;
+	GLuint			fragmentshader = 0;
+	GLuint			geometryshader = 0;
+
+	if( 0 == (vertexshader = GLCompileShaderFromFile(GL_VERTEX_SHADER, vsfile, defines)) )
+		return false;
+
+	if( 0 == (fragmentshader = GLCompileShaderFromFile(GL_FRAGMENT_SHADER, psfile, defines)) )
+	{
+		glDeleteShader(vertexshader);
+		return false;
+	}
+
+	if( gsfile )
+	{
+		if( 0 == (geometryshader = GLCompileShaderFromFile(GL_GEOMETRY_SHADER, gsfile, defines)) )
+		{
+			glDeleteShader(vertexshader);
+			glDeleteShader(fragmentshader);
+
+			return false;
+		}
+	}
+
+	neweffect = new OpenGLEffect();
+	neweffect->program = glCreateProgram();
+
+	glAttachShader(neweffect->program, vertexshader);
+	glAttachShader(neweffect->program, fragmentshader);
+
+	if( geometryshader != 0 )
+		glAttachShader(neweffect->program, geometryshader);
+
+	glLinkProgram(neweffect->program);
+
+	if( !GLCheckLinkStatus(neweffect->program) )
+	{
+		glDeleteShader(vertexshader);
+		glDeleteShader(fragmentshader);
+		
+		if( geometryshader != 0 )
+			glDeleteShader(geometryshader);
+
+		glDeleteProgram(neweffect->program);
+		delete neweffect;
+
+		return false;
+	}
+
+	neweffect->BindAttributes();
+	neweffect->QueryUniforms();
+
+	glDeleteShader(vertexshader);
+	glDeleteShader(fragmentshader);
+
+	if( geometryshader != 0 )
+		glDeleteShader(geometryshader);
 
 	(*effect) = neweffect;
 	return true;
@@ -2154,7 +2426,7 @@ bool GLCreateComputeProgramFromFile(const char* csfile, OpenGLEffect** effect, c
 	GLint			success;
 	GLint			length;
 
-	if( 0 == (shader = GLCompileShader(GL_COMPUTE_SHADER, csfile, defines)) )
+	if( 0 == (shader = GLCompileShaderFromFile(GL_COMPUTE_SHADER, csfile, defines)) )
 		return false;
 
 	neweffect = new OpenGLEffect();
@@ -2204,16 +2476,16 @@ bool GLCreateTessellationProgramFromFile(
 	GLint			length;
 
 	// these are mandatory
-	if( 0 == (vertexshader = GLCompileShader(GL_VERTEX_SHADER, vsfile, 0)) )
+	if( 0 == (vertexshader = GLCompileShaderFromFile(GL_VERTEX_SHADER, vsfile, 0)) )
 		return false;
 
-	if( 0 == (fragmentshader = GLCompileShader(GL_FRAGMENT_SHADER, psfile, 0)) )
+	if( 0 == (fragmentshader = GLCompileShaderFromFile(GL_FRAGMENT_SHADER, psfile, 0)) )
 	{
 		glDeleteShader(vertexshader);
 		return false;
 	}
 
-	if( 0 == (tessevalshader = GLCompileShader(GL_TESS_EVALUATION_SHADER, tefile, 0)) )
+	if( 0 == (tessevalshader = GLCompileShaderFromFile(GL_TESS_EVALUATION_SHADER, tefile, 0)) )
 	{
 		glDeleteShader(vertexshader);
 		glDeleteShader(fragmentshader);
@@ -2224,7 +2496,7 @@ bool GLCreateTessellationProgramFromFile(
 	// others are optional
 	if( tcfile )
 	{
-		if( 0 == (tesscontrolshader = GLCompileShader(GL_TESS_CONTROL_SHADER, tcfile, 0)) )
+		if( 0 == (tesscontrolshader = GLCompileShaderFromFile(GL_TESS_CONTROL_SHADER, tcfile, 0)) )
 		{
 			glDeleteShader(vertexshader);
 			glDeleteShader(fragmentshader);
@@ -2236,7 +2508,7 @@ bool GLCreateTessellationProgramFromFile(
 
 	if( gsfile )
 	{
-		if( 0 == (geometryshader = GLCompileShader(GL_GEOMETRY_SHADER, gsfile, 0)) )
+		if( 0 == (geometryshader = GLCompileShaderFromFile(GL_GEOMETRY_SHADER, gsfile, 0)) )
 		{
 			glDeleteShader(vertexshader);
 			glDeleteShader(fragmentshader);
@@ -2285,10 +2557,121 @@ bool GLCreateTessellationProgramFromFile(
 	glDeleteShader(tessevalshader);
 	glDeleteShader(fragmentshader);
 
-	if( tesscontrolshader )
+	if( tesscontrolshader != 0 )
 		glDeleteShader(tesscontrolshader);
 
+	if( geometryshader != 0 )
+		glDeleteShader(geometryshader);
+
+	(*effect) = neweffect;
+	return true;
+}
+
+bool GLCreateTessellationProgramFromMemory(
+	const char* vscode,
+	const char* tccode,
+	const char* tecode,
+	const char* gscode,
+	const char* pscode,
+	OpenGLEffect** effect)
+{
+	char			log[1024];
+	OpenGLEffect*	neweffect;
+	GLuint			vertexshader = 0;
+	GLuint			tesscontrolshader = 0;
+	GLuint			tessshader = 0;
+	GLuint			tessevalshader = 0;
+	GLuint			geometryshader = 0;
+	GLuint			fragmentshader = 0;
+	GLint			success;
+	GLint			length;
+
+	// these are mandatory
+	if( 0 == (vertexshader = GLCompileShaderFromMemory(GL_VERTEX_SHADER, vscode, 0)) )
+		return false;
+
+	if( 0 == (fragmentshader = GLCompileShaderFromMemory(GL_FRAGMENT_SHADER, pscode, 0)) )
+	{
+		glDeleteShader(vertexshader);
+		return false;
+	}
+
+	if( 0 == (tessevalshader = GLCompileShaderFromMemory(GL_TESS_EVALUATION_SHADER, tecode, 0)) )
+	{
+		glDeleteShader(vertexshader);
+		glDeleteShader(fragmentshader);
+
+		return false;
+	}
+
+	// others are optional
+	if( tccode )
+	{
+		if( 0 == (tesscontrolshader = GLCompileShaderFromMemory(GL_TESS_CONTROL_SHADER, tccode, 0)) )
+		{
+			glDeleteShader(vertexshader);
+			glDeleteShader(fragmentshader);
+			glDeleteShader(tessevalshader);
+
+			return false;
+		}
+	}
+
+	if( gscode )
+	{
+		if( 0 == (geometryshader = GLCompileShaderFromMemory(GL_GEOMETRY_SHADER, gscode, 0)) )
+		{
+			glDeleteShader(vertexshader);
+			glDeleteShader(fragmentshader);
+			glDeleteShader(tessevalshader);
+
+			if( tesscontrolshader )
+				glDeleteShader(tesscontrolshader);
+
+			return false;
+		}
+	}
+
+	neweffect = new OpenGLEffect();
+	neweffect->program = glCreateProgram();
+
+	glAttachShader(neweffect->program, vertexshader);
+	glAttachShader(neweffect->program, tessevalshader);
+	glAttachShader(neweffect->program, fragmentshader);
+
+	if( tesscontrolshader )
+		glAttachShader(neweffect->program, tesscontrolshader);
+
 	if( geometryshader )
+		glAttachShader(neweffect->program, geometryshader);
+
+	glLinkProgram(neweffect->program);
+	glGetProgramiv(neweffect->program, GL_LINK_STATUS, &success);
+
+	if( success != GL_TRUE )
+	{
+		glGetProgramInfoLog(neweffect->program, 1024, &length, log);
+		log[length] = 0;
+
+		std::cout << log << "\n";
+
+		glDeleteProgram(neweffect->program);
+		delete neweffect;
+
+		return false;
+	}
+
+	neweffect->BindAttributes();
+	neweffect->QueryUniforms();
+
+	glDeleteShader(vertexshader);
+	glDeleteShader(tessevalshader);
+	glDeleteShader(fragmentshader);
+
+	if( tesscontrolshader != 0 )
+		glDeleteShader(tesscontrolshader);
+
+	if( geometryshader != 0 )
 		glDeleteShader(geometryshader);
 
 	(*effect) = neweffect;
@@ -2322,7 +2705,7 @@ bool GLCreateTexture(GLsizei width, GLsizei height, GLint miplevels, OpenGLForma
 	return true;
 }
 
-static bool GLCreateTextureFromDDS(const char* file, GLuint* out)
+static bool GLCreateTextureFromDDS(const char* file, bool srgb, GLuint* out)
 {
 	DDS_Image_Info info;
 	GLuint texid = OpenGLContentManager().IDTexture(file);
@@ -2355,19 +2738,27 @@ static bool GLCreateTextureFromDDS(const char* file, GLuint* out)
 	GLsizei pow2w = GLNextPow2(info.Width);
 	GLsizei pow2h = GLNextPow2(info.Height);
 	GLsizei mipsize;
+	GLuint format = info.Format;
 
 	if( info.Format == GLFMT_DXT1 || info.Format == GLFMT_DXT5 )
 	{
+		if( srgb ) {
+			if( info.Format == GLFMT_DXT1 )
+				format = GLFMT_DXT1_sRGB;
+			else
+				format = GLFMT_DXT5_sRGB;
+		}
+
 		// compressed
 		GLsizei width = info.Width;
 		GLsizei height = info.Height;
 		GLsizei offset = 0;
 
-		for( unsigned int j = 0; j < info.MipLevels; ++j )
+		for( uint32_t j = 0; j < info.MipLevels; ++j )
 		{
 			mipsize = GetCompressedLevelSize(info.Width, info.Height, j, info.Format);
 
-			glCompressedTexImage2D(GL_TEXTURE_2D, j, map_Format_Internal[info.Format],
+			glCompressedTexImage2D(GL_TEXTURE_2D, j, map_Format_Internal[format],
 				width, height, 0, mipsize, (char*)info.Data + offset);
 
 			offset += mipsize;
@@ -2379,18 +2770,26 @@ static bool GLCreateTextureFromDDS(const char* file, GLuint* out)
 	else
 	{
 		// uncompressed
-		unsigned int bytes = 4;
+		uint32_t bytes = 4;
 
 		if( info.Format == GLFMT_G32R32F )
 			bytes = 8;
 		else if( info.Format == GLFMT_G16R16F )
 			bytes = 4;
+		else if( info.Format == GLFMT_R8G8B8 || info.Format == GLFMT_B8G8R8 ) {
+			if( srgb ) {
+				// we can do this
+				format = info.Format + 1;
+			}
+
+			bytes = 3;
+		}
 
 		mipsize = info.Width * info.Height * bytes;
 
 		// TODO: itt is mipmap
-		glTexImage2D(GL_TEXTURE_2D, 0, map_Format_Internal[info.Format], info.Width, info.Height, 0,
-			map_Format_Format[info.Format], map_Format_Type[info.Format], (char*)info.Data);
+		glTexImage2D(GL_TEXTURE_2D, 0, map_Format_Internal[format], info.Width, info.Height, 0,
+			map_Format_Format[format], map_Format_Type[format], (char*)info.Data);
 
 		if( info.MipLevels > 1 )
 			glGenerateMipmap(GL_TEXTURE_2D);
@@ -2419,6 +2818,7 @@ static bool GLCreateTextureFromDDS(const char* file, GLuint* out)
 
 bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out, GLuint flags)
 {
+#ifdef _WIN32
 	std::string ext;
 	GLuint texid = OpenGLContentManager().IDTexture(file);
 
@@ -2432,10 +2832,10 @@ bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out, GLuint fl
 	GLGetExtension(ext, file);
 
 	if( ext == "dds" )
-		return GLCreateTextureFromDDS(file, out);
+		return GLCreateTextureFromDDS(file, srgb, out);
 
 	std::wstring wstr;
-	int length = strlen(file);
+	int length = (int)strlen(file);
 	int size = MultiByteToWideChar(CP_UTF8, 0, file, length, 0, 0);
 
 	wstr.resize(size);
@@ -2448,11 +2848,11 @@ bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out, GLuint fl
 		if( bitmap->GetLastStatus() == Gdiplus::Ok )
 		{
 			Gdiplus::BitmapData data;
-			unsigned char* tmpbuff;
+			uint8_t* tmpbuff;
 
 			bitmap->LockBits(0, Gdiplus::ImageLockModeRead, PixelFormat32bppARGB, &data);
 
-			tmpbuff = new unsigned char[data.Width * data.Height * 4];
+			tmpbuff = new uint8_t[data.Width * data.Height * 4];
 			memcpy(tmpbuff, data.Scan0, data.Width * data.Height * 4);
 
 			for( UINT i = 0; i < data.Height; ++i )
@@ -2461,7 +2861,7 @@ bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out, GLuint fl
 				for( UINT j = 0; j < data.Width; ++j )
 				{
 					UINT index = (i * data.Width + j) * 4;
-					std::swap<unsigned char>(tmpbuff[index + 0], tmpbuff[index + 2]);
+					GLSwap<uint8_t>(tmpbuff[index + 0], tmpbuff[index + 2]);
 				}
 
 				// flip on X
@@ -2472,7 +2872,7 @@ bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out, GLuint fl
 						UINT index1 = (i * data.Width + j) * 4;
 						UINT index2 = (i * data.Width + (data.Width - j - 1)) * 4;
 
-						std::swap<unsigned int>(*((unsigned int*)(tmpbuff + index1)), *((unsigned int*)(tmpbuff + index2)));
+						GLSwap<uint32_t>(*((uint32_t*)(tmpbuff + index1)), *((uint32_t*)(tmpbuff + index2)));
 					}
 				}
 			}
@@ -2517,9 +2917,95 @@ bool GLCreateTextureFromFile(const char* file, bool srgb, GLuint* out, GLuint fl
 	OpenGLContentManager().RegisterTexture(file, texid);
 
 	return (texid != 0);
+#else
+	return false;
+#endif
 }
 
-bool GLCreateCubeTextureFromFile(const char* file, GLuint* out)
+bool GLCreateVolumeTextureFromFile(const char* file, bool srgb, GLuint* out)
+{
+	DDS_Image_Info info;
+	GLuint texid = OpenGLContentManager().IDTexture(file);
+
+	if( texid != 0 ) {
+		printf("Pointer %s\n", file);
+		*out = texid;
+
+		return true;
+	}
+
+	if( !LoadFromDDS(file, &info) )
+	{
+		std::cout << "Error: Could not load texture!";
+		return false;
+	}
+
+	glGenTextures(1, &texid);
+	glBindTexture(GL_TEXTURE_3D, texid);
+
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	if( info.MipLevels > 1 )
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	else
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	GLenum format = info.Format;
+
+	if( info.Format == GLFMT_DXT1 || info.Format == GLFMT_DXT5 )
+	{
+		if( srgb )
+		{
+			if( format == GLFMT_DXT1 )
+				format = GLFMT_DXT1_sRGB;
+			else
+				format = GLFMT_DXT5_sRGB;
+		}
+
+		// compressed
+		GLsizei size;
+		GLsizei offset = 0;
+
+		for( uint32_t j = 0; j < info.MipLevels; ++j )
+		{
+			size = GetCompressedLevelSize(info.Width, info.Height, info.Depth, j, info.Format);
+
+			glCompressedTexImage3D(GL_TEXTURE_3D, j, map_Format_Internal[format],
+				info.Width, info.Height, info.Depth, 0, size, (char*)info.Data + offset);
+
+			offset += size * info.Depth;
+		}
+	}
+	else
+	{
+		// TODO:
+	}
+
+	if( info.Data )
+		free(info.Data);
+
+	GLenum err = glGetError();
+
+	if( err != GL_NO_ERROR )
+	{
+		glDeleteTextures(1, &texid);
+		texid = 0;
+
+		std::cout << "Error: Could not create texture!\n";
+	}
+	else
+		std::cout << "Created volume texture " << info.Width << "x" << info.Height << "x" << info.Depth << "\n";
+
+	*out = texid;
+	OpenGLContentManager().RegisterTexture(file, texid);
+
+	return (texid != 0);
+}
+
+bool GLCreateCubeTextureFromFile(const char* file, bool srgb, GLuint* out)
 {
 	DDS_Image_Info info;
 	GLuint texid = OpenGLContentManager().IDTexture(file);
@@ -2551,6 +3037,7 @@ bool GLCreateCubeTextureFromFile(const char* file, GLuint* out)
 
 	GLsizei pow2s = GLNextPow2(info.Width);
 	GLsizei facesize;
+	GLenum format = info.Format;
 
 	if( info.Format == GLFMT_DXT1 || info.Format == GLFMT_DXT5 )
 	{
@@ -2558,14 +3045,22 @@ bool GLCreateCubeTextureFromFile(const char* file, GLuint* out)
 		GLsizei size;
 		GLsizei offset = 0;
 
+		if( srgb )
+		{
+			if( format == GLFMT_DXT1 )
+				format = GLFMT_DXT1_sRGB;
+			else
+				format = GLFMT_DXT5_sRGB;
+		}
+
 		for( int i = 0; i < 6; ++i )
 		{
-			for( unsigned int j = 0; j < info.MipLevels; ++j )
+			for( uint32_t j = 0; j < info.MipLevels; ++j )
 			{
 				size = GLMax(1, pow2s >> j);
 				facesize = GetCompressedLevelSize(info.Width, info.Height, j, info.Format);
 
-				glCompressedTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, j, map_Format_Internal[info.Format],
+				glCompressedTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, j, map_Format_Internal[format],
 					size, size, 0, facesize, (char*)info.Data + offset);
 
 				offset += facesize;
@@ -2584,7 +3079,7 @@ bool GLCreateCubeTextureFromFile(const char* file, GLuint* out)
 
 		for( int i = 0; i < 6; ++i )
 		{
-			for( unsigned int j = 0; j < info.MipLevels; ++j )
+			for( uint32_t j = 0; j < info.MipLevels; ++j )
 			{
 				size = GLMax(1, pow2s >> j);
 				facesize = size * size * bytes;
@@ -2620,6 +3115,7 @@ bool GLCreateCubeTextureFromFile(const char* file, GLuint* out)
 
 bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out)
 {
+#ifdef _WIN32
 	std::wstring wstr;
 	int length, size;
 	GLuint texid = OpenGLContentManager().IDTexture(files[0]);
@@ -2641,7 +3137,7 @@ bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out)
 
 	for( int k = 0; k < 6; ++k )
 	{
-		length = strlen(files[k]);
+		length = (int)strlen(files[k]);
 		size = MultiByteToWideChar(CP_UTF8, 0, files[k], length, 0, 0);
 
 		wstr.resize(size);
@@ -2654,11 +3150,11 @@ bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out)
 			if( bitmap->GetLastStatus() == Gdiplus::Ok )
 			{
 				Gdiplus::BitmapData data;
-				unsigned char* tmpbuff;
+				uint8_t* tmpbuff;
 
 				bitmap->LockBits(0, Gdiplus::ImageLockModeRead, PixelFormat32bppARGB, &data);
 
-				tmpbuff = new unsigned char[data.Width * data.Height * 4];
+				tmpbuff = new uint8_t[data.Width * data.Height * 4];
 				memcpy(tmpbuff, data.Scan0, data.Width * data.Height * 4);
 
 				for( UINT i = 0; i < data.Height; ++i )
@@ -2667,7 +3163,7 @@ bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out)
 					for( UINT j = 0; j < data.Width; ++j )
 					{
 						UINT index = (i * data.Width + j) * 4;
-						std::swap<unsigned char>(tmpbuff[index + 0], tmpbuff[index + 2]);
+						GLSwap<uint8_t>(tmpbuff[index + 0], tmpbuff[index + 2]);
 					}
 
 					// flip on X
@@ -2676,7 +3172,7 @@ bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out)
 						UINT index1 = (i * data.Width + j) * 4;
 						UINT index2 = (i * data.Width + (data.Width - j - 1)) * 4;
 
-						std::swap<unsigned int>(*((unsigned int*)(tmpbuff + index1)), *((unsigned int*)(tmpbuff + index2)));
+						GLSwap<uint32_t>(*((uint32_t*)(tmpbuff + index1)), *((uint32_t*)(tmpbuff + index2)));
 					}
 				}
 
@@ -2713,6 +3209,9 @@ bool GLCreateCubeTextureFromFiles(const char* files[6], bool srgb, GLuint* out)
 	OpenGLContentManager().RegisterTexture(files[0], texid);
 
 	return (texid != 0);
+#else
+	return false;
+#endif
 }
 
 bool GLSaveFP16CubemapToFile(const char* filename, GLuint texture)
@@ -2750,19 +3249,24 @@ bool GLSaveFP16CubemapToFile(const char* filename, GLuint texture)
 
 void GLKillAnyRogueObject()
 {
+#ifdef _WIN32
 	if( gdiplustoken )
 		Gdiplus::GdiplusShutdown(gdiplustoken);
-
+#endif
+	
 	OpenGLContentManager().Release();
 }
 
 void GLRenderText(const std::string& str, uint32_t tex, GLsizei width, GLsizei height)
 {
+#ifdef _WIN32
 	GLRenderTextEx(str, tex, width, height, L"Arial", 1, Gdiplus::FontStyleBold, 25);
+#endif
 }
 
 void GLRenderTextEx(const std::string& str, uint32_t tex, GLsizei width, GLsizei height, const WCHAR* face, bool border, int style, float emsize)
 {
+#ifdef _WIN32
 	if( tex == 0 )
 		return;
 
@@ -2792,7 +3296,7 @@ void GLRenderTextEx(const std::string& str, uint32_t tex, GLsizei width, GLsizei
 	graphics->SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
 	graphics->SetPageUnit(Gdiplus::UnitPixel);
 
-	path.AddString(wstr.c_str(), wstr.length(), &family, style, emsize, Gdiplus::Point(0, 0), &format);
+	path.AddString(wstr.c_str(), (INT)wstr.length(), &family, style, emsize, Gdiplus::Point(0, 0), &format);
 	pen.SetLineJoin(Gdiplus::LineJoinRound);
 
 	if( border )
@@ -2809,17 +3313,49 @@ void GLRenderTextEx(const std::string& str, uint32_t tex, GLsizei width, GLsizei
 
 	glBindTexture(GL_TEXTURE_2D, tex);
 	glTexImage2D(
-		GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
-		GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, data.Scan0);
+		GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, data.Scan0);
 
 	bitmap->UnlockBits(&data);
 
 	delete graphics;
 	delete bitmap;
+#endif
 }
 
 void GLSetTexture(GLenum unit, GLenum target, uint32_t texture)
 {
 	glActiveTexture(unit);
 	glBindTexture(target, texture);
+}
+
+void GLCheckError()
+{
+	GLenum err = glGetError();
+	
+	switch (err)
+	{
+	case GL_NO_ERROR:
+		break;
+		
+	case GL_INVALID_OPERATION:
+		printf("GLCheckError(): GL_INVALID_OPERATION\n");
+		break;
+		
+	case GL_INVALID_FRAMEBUFFER_OPERATION:
+		printf("GLCheckError(): GL_INVALID_FRAMEBUFFER_OPERATION\n");
+		break;
+		
+	case GL_INVALID_ENUM:
+		printf("GLCheckError(): GL_INVALID_ENUM\n");
+		break;
+		
+	case GL_INVALID_VALUE:
+		printf("GLCheckError(): GL_INVALID_VALUE\n");
+		break;
+		
+	default:
+		printf("GLCheckError(): Unknown error %x\n", err);
+		break;
+	}
 }

@@ -30,7 +30,7 @@ struct InputState
 {
 	unsigned char Button;
 	short X, Y;
-	int dX, dY;
+	int dX, dY, dZ;
 } inputstate;
 
 // must be implemented by sample
@@ -43,6 +43,7 @@ extern void Render(float alpha, float elapsedtime);
 extern void Event_KeyDown(unsigned char keycode);
 extern void Event_KeyUp(unsigned char keycode);
 extern void Event_MouseMove(int x, int y, short dx, short dy);
+extern void Event_MouseScroll(int x, int y, short dz);
 extern void Event_MouseDown(int x, int y, unsigned char button);
 extern void Event_MouseUp(int x, int y, unsigned char button);
 
@@ -109,6 +110,7 @@ bool InitGL(HWND hwnd)
 	{
 		std::cout << "WGL_ARB_pixel_format present, querying pixel formats...\n";
 
+		// NOTE: could use qGLExtensions::QueryFeatures(), but it would be a waste; only core profile contexts report the new extensions
 		typedef HGLRC (APIENTRY *WGLCREATECONTEXTATTRIBSARBPROC)(HDC hDC, HGLRC hShareContext, const int *attribList);
 		typedef BOOL (APIENTRY *WGLGETPIXELFORMATATTRIBIVARBPROC)(HDC hdc, int iPixelFormat, int iLayerPlane, UINT nAttributes, const int *piAttributes, int *piValues);
 		typedef BOOL (APIENTRY *WGLGETPIXELFORMATATTRIBFVARBPROC)(HDC hdc, int iPixelFormat, int iLayerPlane, UINT nAttributes, const int *piAttributes, FLOAT *pfValues);
@@ -119,15 +121,15 @@ bool InitGL(HWND hwnd)
 		WGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB = (WGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
 		WGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = NULL;
 
-		int attrib[128];
+		int attrib[32];
 		int i = 0;
 		UINT numformats;
 
 		memset(attrib, 0, sizeof(attrib));
 
-		attrib[i++] = 0x2001;		// WGL_DRAW_TO_WINDOW_ARB;
+		attrib[i++] = 0x2001;		// WGL_DRAW_TO_WINDOW_ARB
 		attrib[i++] = TRUE;
-		attrib[i++] = 0x2003;		// WGL_ACCELERATION_ARB;
+		attrib[i++] = 0x2003;		// WGL_ACCELERATION_ARB
 		attrib[i++] = 0x2027;		// WGL_FULL_ACCELERATION_ARB
 		attrib[i++] = 0x2010;		// WGL_SUPPORT_OPENGL_ARB
 		attrib[i++] = TRUE;
@@ -187,17 +189,19 @@ bool InitGL(HWND hwnd)
 			{
 				int contextattribs[] =
 				{
-					0x2091,		// WGL_CONTEXT_MAJOR_VERSION_ARB
+					0x2091,			// WGL_CONTEXT_MAJOR_VERSION_ARB
 					major,
-					0x2092,		// WGL_CONTEXT_MINOR_VERSION_ARB
+					0x2092,			// WGL_CONTEXT_MINOR_VERSION_ARB
 					minor,
-					0x2094,		// WGL_CONTEXT_FLAGS_ARB
+					0x2094,			// WGL_CONTEXT_FLAGS_ARB
 #ifdef _DEBUG
-					//0x0001,	// WGL_CONTEXT_DEBUG_BIT
+					// NOTE: ARB_debug_output only works on Windows @ nVidia/Intel
+					0x0001,			// WGL_CONTEXT_DEBUG_BIT
+#else
+					0x0000,
 #endif
-					0x0002,		// WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
-					0x9126,		// WGL_CONTEXT_PROFILE_MASK_ARB
-					0x00000001,	// WGL_CONTEXT_CORE_PROFILE_BIT_ARB
+					0x9126,			// WGL_CONTEXT_PROFILE_MASK_ARB
+					0x00000001,		// WGL_CONTEXT_CORE_PROFILE_BIT_ARB
 					0
 				};
 
@@ -368,6 +372,16 @@ LRESULT WINAPI WndProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam
 		Event_MouseMove(inputstate.X, inputstate.Y, inputstate.dX, inputstate.dY);
 		} break;
 
+	case WM_MOUSEWHEEL: {
+		short x = (short)(lParam & 0xffff);
+		short y = (short)((lParam >> 16) & 0xffff);
+		short delta = (short)((wParam >> 16) & 0xffff);
+
+		inputstate.dZ = delta / WHEEL_DELTA;
+
+		Event_MouseScroll(x, x, inputstate.dZ);
+		} break;
+
 	case WM_LBUTTONDOWN:
 		inputstate.Button |= 1;
 		Event_MouseDown(inputstate.X, inputstate.Y, 1);
@@ -378,6 +392,11 @@ LRESULT WINAPI WndProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam
 		Event_MouseDown(inputstate.X, inputstate.Y, 2);
 		break;
 
+	case WM_MBUTTONDOWN:
+		inputstate.Button |= 4;
+		Event_MouseDown(inputstate.X, inputstate.Y, 4);
+		break;
+
 	case WM_LBUTTONUP:
 		Event_MouseUp(inputstate.X, inputstate.Y, inputstate.Button & 1);
 		inputstate.Button &= (~1);
@@ -386,6 +405,11 @@ LRESULT WINAPI WndProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam
 	case WM_RBUTTONUP:
 		Event_MouseUp(inputstate.X, inputstate.Y, inputstate.Button & 2);
 		inputstate.Button &= (~2);
+		break;
+
+	case WM_MBUTTONUP:
+		Event_MouseUp(inputstate.X, inputstate.Y, inputstate.Button & 4);
+		inputstate.Button &= (~4);
 		break;
 
 	default:
@@ -422,6 +446,11 @@ void ReadResolutionFile()
 			fclose(fp);
 		}
 	}
+}
+
+std::string GetResource(const std::string& file)
+{
+	return file;
 }
 
 int main(int argc, char* argv[])

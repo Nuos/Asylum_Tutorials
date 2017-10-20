@@ -1,4 +1,4 @@
-//*************************************************************************************************************
+
 #include <Windows.h>
 #include <GdiPlus.h>
 #include <iostream>
@@ -346,15 +346,15 @@ bool InitScene()
 	Tessellate();
 
 	// text
-	GLCreateTexture(800, 130, 1, GLFMT_A8R8G8B8, &text1);
+	GLCreateTexture(800, 130, 1, GLFMT_A8B8G8R8, &text1);
 	UpdateText();
 
-	float angles[2] = { M_PI / 2, 0.5f };
+	float angles[2] = { -M_PI / 2, -0.5f };
 	cameraangle = angles;
 
 	return true;
 }
-//*************************************************************************************************************
+
 void UninitScene()
 {
 	SAFE_DELETE(tessellatesurface);
@@ -375,7 +375,7 @@ void UninitScene()
 
 	GLKillAnyRogueObject();
 }
-//*************************************************************************************************************
+
 bool UpdateControlPoints(float mx, float my)
 {
 	CurveData& current = curves[currentcurve];
@@ -426,7 +426,7 @@ bool UpdateControlPoints(float mx, float my)
 
 	return isselected;
 }
-//*************************************************************************************************************
+
 void ChangeCurve(GLuint newcurve)
 {
 	CurveData&	next = curves[newcurve];
@@ -447,7 +447,7 @@ void ChangeCurve(GLuint newcurve)
 
 	UpdateText();
 }
-//*************************************************************************************************************
+
 void Tessellate()
 {
 	if( !hascompute )
@@ -541,11 +541,11 @@ void Tessellate()
 
 	delete[] surfacecvs;
 }
-//*************************************************************************************************************
+
 void Event_KeyDown(unsigned char keycode)
 {
 }
-//*************************************************************************************************************
+
 void Event_KeyUp(unsigned char keycode)
 {
 	int numcurves = sizeof(curves) / sizeof(curves[0]);
@@ -586,7 +586,7 @@ void Event_KeyUp(unsigned char keycode)
 		break;
 	}
 }
-//*************************************************************************************************************
+
 void Event_MouseMove(int x, int y, short dx, short dy)
 {
 	mousex = x;
@@ -606,18 +606,22 @@ void Event_MouseMove(int x, int y, short dx, short dy)
 	else
 		selectedcontrolpoint = -1;
 }
-//*************************************************************************************************************
+
+void Event_MouseScroll(int x, int y, short dz)
+{
+}
+
 void Event_MouseDown(int x, int y, unsigned char button)
 {
 	mousedown = 1;
 	Event_MouseMove(x, y, 0, 0);
 }
-//*************************************************************************************************************
+
 void Event_MouseUp(int x, int y, unsigned char button)
 {
 	mousedown = 0;
 }
-//*************************************************************************************************************
+
 void Update(float delta)
 {
 	cameraangle.prev[0] = cameraangle.curr[0];
@@ -634,8 +638,8 @@ void Update(float delta)
 			((mousex >= left && mousex <= right) &&
 			(mousey >= top && mousey <= bottom)) )
 		{
-			cameraangle.curr[0] += mousedx * 0.004f;
-			cameraangle.curr[1] += mousedy * 0.004f;
+			cameraangle.curr[0] -= mousedx * 0.004f;
+			cameraangle.curr[1] -= mousedy * 0.004f;
 		}
 	}
 
@@ -646,7 +650,7 @@ void Update(float delta)
 	if( cameraangle.curr[1] <= -1.5f )
 		cameraangle.curr[1] = -1.5f;
 }
-//*************************************************************************************************************
+
 void Render(float alpha, float elapsedtime)
 {
 	OpenGLColor	grcolor(0xffdddddd);
@@ -659,6 +663,7 @@ void Render(float alpha, float elapsedtime)
 	float		view[16];
 	float		proj[16];
 	float		viewproj[16];
+	float		tmp[16];
 
 	float		pointsize[2]	= { 10.0f / screenwidth, 10.0f / screenheight };
 	float		grthickness[2]	= { 1.5f / screenwidth, 1.5f / screenheight };
@@ -744,7 +749,11 @@ void Render(float alpha, float elapsedtime)
 	cameraangle.smooth(orient, alpha);
 
 	GLVec3Subtract(fwd, look, eye);
-	GLMatrixRotationRollPitchYaw(view, 0, orient[1], orient[0]);
+
+	GLMatrixRotationAxis(view, orient[1], 1, 0, 0);
+	GLMatrixRotationAxis(tmp, orient[0], 0, 1, 0);
+	GLMatrixMultiply(view, view, tmp);
+
 	GLVec3Transform(fwd, fwd, view);
 	GLVec3Subtract(eye, look, fwd);
 
@@ -820,4 +829,3 @@ void Render(float alpha, float elapsedtime)
 	SwapBuffers(hdc);
 	mousedx = mousedy = 0;
 }
-//*************************************************************************************************************

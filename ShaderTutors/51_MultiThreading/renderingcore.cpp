@@ -21,8 +21,7 @@ static int		GLMinorVersion = 0;
 RenderingCore*	RenderingCore::_inst = 0;
 Guard			RenderingCore::singletonguard;
 
-namespace Quadron
-{
+namespace Quadron {
 	extern bool wIsSupported(const char* name, HDC hdc);
 }
 
@@ -207,6 +206,8 @@ int RenderingCore::PrivateInterface::CreateContext(HDC hdc)
 	context.hdc = hdc;
 	contexts.push_back(context);
 
+	activecontext = context;
+
 #ifdef _DEBUG
 	if( Quadron::qGLExtensions::ARB_debug_output )
 	{
@@ -226,8 +227,11 @@ void RenderingCore::PrivateInterface::DeleteContext(int id)
 	{
 		bool isthisactive = (context.hrc == activecontext.hrc);
 
-		if( !wglMakeCurrent(context.hdc, NULL) )
-			MYERROR("Could not release context");
+		if( isthisactive )
+		{
+			if( !wglMakeCurrent(context.hdc, NULL) )
+				MYERROR("Could not release context");
+		}
 
 		if( !wglDeleteContext(context.hrc) )
 			MYERROR("Could not delete context");
@@ -239,11 +243,6 @@ void RenderingCore::PrivateInterface::DeleteContext(int id)
 
 		if( isthisactive )
 			activecontext = context;
-		else if( activecontext.hrc )
-		{
-			if( !wglMakeCurrent(activecontext.hdc, activecontext.hrc) )
-				MYERROR("Could not reactivate context");
-		}
 	}
 }
 
@@ -258,7 +257,12 @@ bool RenderingCore::PrivateInterface::ActivateContext(int id)
 	{
 		if( context.hrc )
 		{
-			wglMakeCurrent(context.hdc, context.hrc);
+			if( !wglMakeCurrent(context.hdc, context.hrc) )
+			{
+				MYERROR("Could not activate context");
+				return false;
+			}
+
 			activecontext = context;
 		}
 	}
@@ -426,7 +430,38 @@ OpenGLMesh* RenderingCore::PrivateInterface::CreateMesh(GLuint numvertices, GLui
 //
 // *****************************************************************************************************************************
 
-class UniverseCreatorTask : public RenderingCore::IRenderingTask
+class BarrierTask : public IRenderingTask
+{
+private:
+	Signal	promise;
+
+public:
+	BarrierTask()
+		: IRenderingTask(-3)
+	{
+		promise.Halt();
+	}
+
+	~BarrierTask()
+	{
+		promise.Close();
+	}
+
+	void Execute(IRenderingContext* context)
+	{
+		promise.Fire ();
+	}
+
+	void Dispose()
+	{
+	}
+
+	inline Signal& GetFuture() {
+		return promise;
+	}
+};
+
+class UniverseCreatorTask : public IRenderingTask
 {
 	enum ContextAction
 	{
@@ -442,7 +477,7 @@ private:
 
 public:
 	UniverseCreatorTask(RenderingCore::PrivateInterface* interf, HDC dc)
-		: RenderingCore::IRenderingTask(-2)
+		: IRenderingTask(-2)
 	{
 		privinterf		= interf;
 		hdc				= dc;
@@ -451,7 +486,7 @@ public:
 	}
 
 	UniverseCreatorTask(RenderingCore::PrivateInterface* interf, int id)
-		: RenderingCore::IRenderingTask(0)
+		: IRenderingTask(0)
 	{
 		privinterf		= interf;
 		hdc				= 0;
@@ -478,27 +513,18 @@ public:
 
 // *****************************************************************************************************************************
 //
-// RenderingCore::IRenderingTask impl
+// IRenderingTask impl
 //
 // *****************************************************************************************************************************
 
-RenderingCore::IRenderingTask::IRenderingTask(int universe)
+IRenderingTask::IRenderingTask(int universe)
 {
 	universeid = universe;
-	disposing = false;
+	_InterlockedExchange(&disposing, 0);
 }
 
-RenderingCore::IRenderingTask::~IRenderingTask()
+IRenderingTask::~IRenderingTask()
 {
-}
-
-void RenderingCore::IRenderingTask::Release()
-{
-	// NOTE: runs on any other thread
-	Wait();
-
-	disposing = true;
-	GetRenderingCore()->AddTask(this);
 }
 
 // *****************************************************************************************************************************
@@ -528,8 +554,8 @@ int RenderingCore::CreateUniverse(HDC hdc)
 {
 	UniverseCreatorTask* creator = new UniverseCreatorTask(privinterf, hdc);
 
-	tasks.push(creator);
-	creator->Wait();
+	AddTask(creator);
+	Barrier();
 
 	int id = creator->GetContextID();
 	delete creator;
@@ -541,22 +567,30 @@ void RenderingCore::DeleteUniverse(int id)
 {
 	UniverseCreatorTask* deleter = new UniverseCreatorTask(privinterf, id);
 
-	tasks.push(deleter);
-	deleter->Wait();
+	AddTask(deleter);
+	Barrier();
 
 	delete deleter;
 }
 
+void RenderingCore::Barrier()
+{
+	BarrierTask* barrier = new BarrierTask();
+	Signal& future = barrier->GetFuture();
+
+	AddTask(barrier);
+	future.Wait();
+}
+
 void RenderingCore::AddTask(IRenderingTask* task)
 {
-	task->finished.Halt();
 	tasks.push(task);
 }
 
 void RenderingCore::Shutdown()
 {
-	thread.Stop();
-	thread.Close();
+	tasks.push(0);
+	thread.Wait();
 
 	delete _inst;
 	_inst = 0;
@@ -647,26 +681,25 @@ void RenderingCore::THREAD_Run()
 	{
 		IRenderingTask* action = tasks.pop();
 
-		if( action->GetUniverseID() == -2 )
-		{
-			// this is a context creator action
-			// NOTE: unsafe...
+		if( action == 0 ) {
+			// exit call
+			break;
+		} else if( action->GetUniverseID() == -3 ) {
+			// barrier task
+			action->Execute(0);
+		} else if( action->GetUniverseID() == -2 ) {
+			// context creator task
+			action->Execute(privinterf);
+		} else if( privinterf->ActivateContext(action->GetUniverseID()) ) {
+			// rendering task
 			action->Execute(privinterf);
 		}
-		else if( privinterf->ActivateContext(action->GetUniverseID()) )
-		{
-			if( action->disposing )
-			{
-				action->Dispose();
 
-				delete action;
-				action = 0;
-			}
-			else
-				action->Execute(privinterf);
+		if( action->IsMarkedForDispose() ) {
+			action->Dispose();
+
+			delete action;
+			action = 0;
 		}
-
-		if( action )
-			action->finished.Fire();
 	}
 }

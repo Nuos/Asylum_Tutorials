@@ -804,7 +804,13 @@ int main(int argc, char* argv[])
 			{
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
+
+				if( msg.message == WM_QUIT )
+					break;
 			}
+
+			if( msg.message == WM_QUIT )
+				break;
 
 			if( !uninited )
 				Update(0.1f);

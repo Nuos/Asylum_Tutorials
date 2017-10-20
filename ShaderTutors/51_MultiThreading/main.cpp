@@ -16,6 +16,8 @@
 #include "win32window.h"
 #include "renderingcore.h"
 
+// TODO: megcsinalni rendesen a threading osztalyokat...
+
 extern void MainWindow_Created(Win32Window*);
 extern void MainWindow_Closing(Win32Window*);
 extern void MainWindow_KeyPress(Win32Window*, WPARAM);

@@ -835,17 +835,17 @@ bool InitScene()
 	GLCreateTextureFromFile("../media/textures/wood1.jpg", true, &woodtex);
 	GLCreateTextureFromFile("../media/textures/scarlett.jpg", true, &tvtex);
 
-	GLCreateCubeTextureFromFile("../media/textures/uffizi.dds", &skytexture);
-	GLCreateCubeTextureFromFile("../media/textures/uffizi_diff_irrad.dds", &skyirraddiff);
-	GLCreateCubeTextureFromFile("../media/textures/uffizi_spec_irrad.dds", &skyirradspec);
-	GLCreateCubeTextureFromFile("../media/textures/local1_spec_irrad.dds", &localprobe1spec);
+	GLCreateCubeTextureFromFile("../media/textures/uffizi.dds", false, &skytexture);
+	GLCreateCubeTextureFromFile("../media/textures/uffizi_diff_irrad.dds", false, &skyirraddiff);
+	GLCreateCubeTextureFromFile("../media/textures/uffizi_spec_irrad.dds", false, &skyirradspec);
+	GLCreateCubeTextureFromFile("../media/textures/local1_spec_irrad.dds", false, &localprobe1spec);
 
 	GLCreateTextureFromFile("../media/textures/brdf.dds", false, &integratedbrdf);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	GLCreateTexture(512, 256, 1, GLFMT_A8R8G8B8, &infotex);
+	GLCreateTexture(512, 256, 1, GLFMT_A8B8G8R8, &infotex);
 
 	// room
 	objects[OBJECT_ID_ROOM] = new SceneObject("../media/meshes/livingroom.qm", RigidBody::None);
@@ -1131,13 +1131,13 @@ bool InitScene()
 		return false;
 
 	rawsao = new OpenGLFramebuffer(screenwidth, screenheight);
-	rawsao->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_A8R8G8B8, GL_LINEAR);
+	rawsao->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_A8B8G8R8, GL_LINEAR);
 
 	if( !rawsao->Validate() )
 		return false;
 
 	blurredsao = new OpenGLFramebuffer(screenwidth, screenheight);
-	blurredsao->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_A8R8G8B8, GL_LINEAR);
+	blurredsao->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_A8B8G8R8, GL_LINEAR);
 
 	if( !blurredsao->Validate() )
 		return false;
@@ -1446,6 +1446,10 @@ void Event_KeyUp(unsigned char keycode)
 void Event_MouseMove(int x, int y, short dx, short dy)
 {
 	camera->Event_MouseMove(dx, dy);
+}
+
+void Event_MouseScroll(int x, int y, short dz)
+{
 }
 
 void Event_MouseDown(int x, int y, unsigned char button)
@@ -1838,7 +1842,7 @@ void RenderScene(float viewproj[16], float eye[3], bool transparent)
 
 			effect->SetFloat("luminance", light.GetLuminance());
 			effect->SetFloat("radius", light.GetRadius());
-		break;
+			break;
 
 		default:
 			continue;

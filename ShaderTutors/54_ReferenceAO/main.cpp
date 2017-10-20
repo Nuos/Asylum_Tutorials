@@ -9,7 +9,7 @@
 #define MAX_SAMPLES			16384	// for path tracer
 
 // helper macros
-#define TITLE				"Shader sample 54: AO path tracer"
+#define TITLE				"Shader sample 54: GTAO vs. path tracing"
 #define MYERROR(x)			{ std::cout << "* Error: " << x << "!\n"; }
 #define SAFE_DELETE(x)		if( (x) ) { delete (x); (x) = 0; }
 
@@ -105,7 +105,7 @@ bool InitScene()
 
 	gbuffer = new OpenGLFramebuffer(screenwidth, screenheight);
 
-	gbuffer->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_sA8R8G8B8, GL_NEAREST);		// color
+	gbuffer->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_A8B8G8R8_sRGB, GL_NEAREST);	// color
 	gbuffer->AttachTexture(GL_COLOR_ATTACHMENT1, GLFMT_A16B16G16R16F, GL_NEAREST);	// normals
 	gbuffer->AttachTexture(GL_COLOR_ATTACHMENT2, GLFMT_R32F, GL_NEAREST);			// depth
 	gbuffer->AttachTexture(GL_COLOR_ATTACHMENT3, GLFMT_G16R16F, GL_NEAREST);		// velocity
@@ -157,7 +157,7 @@ bool InitScene()
 
 	if( !GLCreateEffectFromFile("../media/shadersGL/basic2D.vert", 0, "../media/shadersGL/basic2D.frag", &presenteffect) )
 	{
-		MYERROR("Could not load 'gamma correct' shader");
+		MYERROR("Could not load 'basic2D' shader");
 		return false;
 	}
 
@@ -177,7 +177,7 @@ bool InitScene()
 	screenquad = new OpenGLScreenQuad();
 
 	// render text
-	GLCreateTexture(512, 512, 1, GLFMT_A8R8G8B8, &text1);
+	GLCreateTexture(512, 512, 1, GLFMT_A8B8G8R8, &text1);
 
 	GLRenderText(
 		"Use the mouse to rotate camera\n\nP - Toggle path tracer\nH - Toggle help text",
@@ -187,6 +187,7 @@ bool InitScene()
 	orbitcamera.SetAspect((float)screenwidth / (float)screenheight);
 	orbitcamera.SetFov(GL_PI / 4.0f);
 	orbitcamera.SetPosition(0, 1.633f, 0);
+	orbitcamera.SetOrientation(GLDegreesToRadians(135), GLDegreesToRadians(30), 0);
 	orbitcamera.SetDistance(6);
 	orbitcamera.SetClipPlanes(0.1f, 20);
 
@@ -231,6 +232,10 @@ void Event_MouseMove(int x, int y, short dx, short dy)
 		orbitcamera.OrbitRight(GLDegreesToRadians(dx));
 		orbitcamera.OrbitUp(GLDegreesToRadians(dy));
 	}
+}
+
+void Event_MouseScroll(int x, int y, short dz)
+{
 }
 
 void Event_MouseDown(int x, int y, unsigned char button)

@@ -1,4 +1,4 @@
-//*************************************************************************************************************
+
 #include <Windows.h>
 #include <GdiPlus.h>
 #include <iostream>
@@ -31,7 +31,7 @@ OpenGLEffect*		varianceshadow	= 0;
 OpenGLEffect*		boxblur3x3		= 0;
 
 OpenGLFramebuffer*	framebuffer		= 0;
-OpenGLFramebuffer*	bloomtarget			= 0;
+OpenGLFramebuffer*	bloomtarget		= 0;
 OpenGLFramebuffer*	shadowmap		= 0;
 OpenGLFramebuffer*	blurredshadow	= 0;
 OpenGLMesh*			angel			= 0;
@@ -95,7 +95,7 @@ bool InitScene()
 
 	GLCreateTextureFromFile("../media/textures/burloak.jpg", true, &tabletex);
 	GLCreateCubeTextureFromFiles(files, true, &skytex);
-	GLCreateTexture(4, 4, 1, GLFMT_A8R8G8B8, &angeltex);
+	GLCreateTexture(4, 4, 1, GLFMT_A8B8G8R8, &angeltex);
 
 	GLuint data[] =
 	{
@@ -107,7 +107,7 @@ bool InitScene()
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 4, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 4, 4, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
 
 	// render targets
 	framebuffer = new OpenGLFramebuffer(screenwidth, screenheight);
@@ -181,8 +181,8 @@ bool InitScene()
 	bloom->SetInt("sampler0", 0);
 	bloom->SetInt("sampler1", 1);
 
-	float angles1[2] = { GLDegreesToRadians(-225), 0.45f }; //{ -0.25f, 0.7f };
-	float angles2[2] = { GLDegreesToRadians(-135), 0.78f };
+	float angles1[2] = { GLDegreesToRadians(225), -0.45f }; //{ 0.25f, -0.7f };
+	float angles2[2] = { GLDegreesToRadians(135), -0.78f };
 
 	cameraangle = angles1;
 	lightangle = angles2;
@@ -192,7 +192,7 @@ bool InitScene()
 
 	return true;
 }
-//*************************************************************************************************************
+
 void UninitScene()
 {
 	SAFE_DELETE(skymesh);
@@ -217,31 +217,35 @@ void UninitScene()
 
 	GLKillAnyRogueObject();
 }
-//*************************************************************************************************************
+
 void Event_KeyDown(unsigned char keycode)
 {
 }
-//*************************************************************************************************************
+
 void Event_KeyUp(unsigned char keycode)
 {
 }
-//*************************************************************************************************************
+
 void Event_MouseMove(int x, int y, short dx, short dy)
 {
 	mousedx += dx;
 	mousedy += dy;
 }
-//*************************************************************************************************************
+
+void Event_MouseScroll(int x, int y, short dz)
+{
+}
+
 void Event_MouseDown(int x, int y, unsigned char button)
 {
 	mousedown = button;
 }
-//*************************************************************************************************************
+
 void Event_MouseUp(int x, int y, unsigned char button)
 {
 	mousedown &= (~button);
 }
-//*************************************************************************************************************
+
 void Update(float delta)
 {
 	cameraangle.prev[0] = cameraangle.curr[0];
@@ -252,34 +256,35 @@ void Update(float delta)
 
 	if( mousedown == 1 )
 	{
-		cameraangle.curr[0] += mousedx * 0.004f;
-		cameraangle.curr[1] += mousedy * 0.004f;
+		cameraangle.curr[0] -= mousedx * 0.004f;
+		cameraangle.curr[1] -= mousedy * 0.004f;
 	}
 
 	if( mousedown == 2 )
 	{
-		lightangle.curr[0] += mousedx * 0.004f;
-		lightangle.curr[1] += mousedy * 0.004f;
+		lightangle.curr[0] -= mousedx * 0.004f;
+		lightangle.curr[1] -= mousedy * 0.004f;
 	}
 
-	if( cameraangle.curr[1] >= 1.5f )
-		cameraangle.curr[1] = 1.5f;
+	if( cameraangle.curr[1] <= -1.5f )
+		cameraangle.curr[1] = -1.5f;
 
-	if( cameraangle.curr[1] <= -0.3f )
-		cameraangle.curr[1] = -0.3f;
+	if( cameraangle.curr[1] >= 0.3f )
+		cameraangle.curr[1] = 0.3f;
 
-	if( lightangle.curr[1] >= 1.5f )
-		lightangle.curr[1] = 1.5f;
+	if( lightangle.curr[1] <= -1.5f )
+		lightangle.curr[1] = -1.5f;
 
-	if( lightangle.curr[1] <= 0.4f )
-		lightangle.curr[1] = 0.4f;
+	if( lightangle.curr[1] >= -0.4f )
+		lightangle.curr[1] = -0.4f;
 }
-//*************************************************************************************************************
+
 void Render(float alpha, float elapsedtime)
 {
 	float world[16];
 	float view[16];
 	float proj[16];
+	float tmp[16];
 	float viewproj[16];
 	float lightview[16];
 	float lightproj[16];
@@ -300,7 +305,10 @@ void Render(float alpha, float elapsedtime)
 	lightangle.smooth(lightorient, alpha);
 
 	// setup light
-	GLMatrixRotationRollPitchYaw(lightview, 0, lightorient[1], lightorient[0]);
+	GLMatrixRotationAxis(lightview, lightorient[1], 1, 0, 0);
+	GLMatrixRotationAxis(tmp, lightorient[0], 0, 1, 0);
+	GLMatrixMultiply(lightview, lightview, tmp);
+
 	GLVec3Transform(lightpos, lightpos, lightview);
 
 	lightpos[1] += 0.5f;
@@ -312,7 +320,10 @@ void Render(float alpha, float elapsedtime)
 	GLMatrixMultiply(lightvp, lightview, lightproj);
 
 	// setup camera
-	GLMatrixRotationRollPitchYaw(view, 0, orient[1], orient[0]);
+	GLMatrixRotationAxis(view, orient[1], 1, 0, 0);
+	GLMatrixRotationAxis(tmp, orient[0], 0, 1, 0);
+	GLMatrixMultiply(view, view, tmp);
+
 	GLVec3Transform(eye, eye, view);
 	
 	eye[1] += 0.5f;
@@ -484,4 +495,3 @@ void Render(float alpha, float elapsedtime)
 	SwapBuffers(hdc);
 	mousedx = mousedy = 0;
 }
-//*************************************************************************************************************

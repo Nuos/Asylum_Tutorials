@@ -1,5 +1,5 @@
 
-#version 150
+#version 330
 
 uniform vec4 color;
 
@@ -7,7 +7,11 @@ in vec3 wnorm;
 in vec3 vdir;
 in vec3 ldir;
 
-out vec4 outColor;
+#ifdef HARDWARE_INSTANCING
+in vec4 instcolor;
+#endif
+
+out vec4 my_FragColor0;
 
 void main()
 {
@@ -21,6 +25,11 @@ void main()
 
 	s = pow(s, 80.0);
 
-	outColor.rgb = color.rgb * d + vec3(s);
-	outColor.a = color.a;
+#ifdef HARDWARE_INSTANCING
+	my_FragColor0.rgb = instcolor.rgb * color.rgb * d + vec3(s);
+	my_FragColor0.a = instcolor.a * color.a;
+#else
+	my_FragColor0.rgb = color.rgb * d + vec3(s);
+	my_FragColor0.a = color.a;
+#endif
 }

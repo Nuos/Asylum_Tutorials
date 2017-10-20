@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <cstdio>
 #include <cmath>
 #include <cfloat>
 #include <string>
@@ -117,6 +118,7 @@ void FUNC_PROTO(Vec3Rotate)(float out[3], float v[3], float q[4]);
 void FUNC_PROTO(Vec3Transform)(float out[3], const float v[3], const float m[16]);
 void FUNC_PROTO(Vec3TransformTranspose)(float out[3], const float m[16], const float v[3]);
 void FUNC_PROTO(Vec3TransformCoord)(float out[3], const float v[3], const float m[16]);
+void FUNC_PROTO(Vec3TransformCoordTranspose)(float out[3], const float m[16], const float v[3]);
 
 void FUNC_PROTO(Vec4Assign)(float out[4], const float a[4]);
 void FUNC_PROTO(Vec4Lerp)(float out[4], const float a[4], const float b[4], float s);
@@ -143,8 +145,6 @@ void FUNC_PROTO(MatrixTranslation)(float out[16], float x, float y, float z);
 void FUNC_PROTO(MatrixTranspose)(float out[16], float m[16]);
 void FUNC_PROTO(MatrixScaling)(float out[16], float x, float y, float z);
 void FUNC_PROTO(MatrixRotationAxis)(float out[16], float angle, float x, float y, float z);
-void FUNC_PROTO(MatrixRotationYawPitchRoll)(float out[16], float yaw, float pitch, float roll);
-void FUNC_PROTO(MatrixRotationRollPitchYaw)(float out[16], float roll, float pitch, float yaw);
 void FUNC_PROTO(MatrixRotationQuaternion)(float out[16], const float q[4]);
 void FUNC_PROTO(MatrixIdentity)(float out[16]);
 void FUNC_PROTO(MatrixInverse)(float out[16], const float m[16]);
@@ -156,10 +156,6 @@ void FUNC_PROTO(QuaternionMultiply)(float out[4], float a[4], float b[4]);
 void FUNC_PROTO(QuaternionSet)(float out[4], float x, float y, float z, float w);
 void FUNC_PROTO(QuaternionNormalize)(float out[4], float q[4]);
 void FUNC_PROTO(QuaternionRotationAxis)(float out[4], float x, float y, float z, float angle);
-void FUNC_PROTO(QuaternionRotationYawPitchRoll)(float out[4], float yaw, float pitch, float roll);
-void FUNC_PROTO(QuaternionForward)(float out[3], const float q[4]);
-void FUNC_PROTO(QuaternionRight)(float out[3], const float q[4]);
-void FUNC_PROTO(QuaternionUp)(float out[3], const float q[4]);
 
 void FUNC_PROTO(FrustumPlanes)(float out[6][4], const float viewproj[16]);
 void FUNC_PROTO(FitToBox)(float& outnear, float& outfar, const float eye[3], const float look[3], const CLASS_PROTO(AABox)& box);
@@ -233,6 +229,14 @@ inline const T& FUNC_PROTO(Max)(const T& a, const T& b) {
 	return ((a > b) ? a : b);
 }
 
+template <typename T>
+void FUNC_PROTO(Swap)(T& a, T& b)
+{
+	T tmp = a;
+	a = b;
+	b = tmp;
+}
+
 inline float FUNC_PROTO(DegreesToRadians)(float value) {
 	return value * (FUNC_PROTO(_PI) / 180.0f);
 }
@@ -247,6 +251,27 @@ inline float FUNC_PROTO(Clamp)(float value, float min, float max) {
 
 inline float FUNC_PROTO(RandomFloat)() {
 	return (rand() & 32767) / 32767.0f;
+}
+
+inline float FUNC_PROTO(Lerp)(float a, float b, float s) {
+	return (1.0f - s) * a + s * b;
+}
+
+inline float FUNC_PROTO(VerticalFov)(float hfov, float w, float h) {
+	return atan2f(h * tanf(hfov * 0.5f), w) * 2;
+}
+
+inline float FUNC_PROTO(HorizontalFov)(float vfov, float w, float h) {
+	return atan2f(w * tanf(vfov * 0.5f), h) * 2;
+}
+
+inline FILE* FUNC_PROTO(OpenFile)(const char* filename, const char* mode) {
+#ifdef _MSC_VER
+	FILE* f = 0;
+	fopen_s(&f, filename, mode);
+#else
+	return fopen(filename, mode);
+#endif
 }
 
 #endif
