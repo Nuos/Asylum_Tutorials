@@ -2,7 +2,6 @@
 
 #define SCENE			3
 
-#define FLT_MAX			3.40282347E+38
 #define PI				3.1415926535897932
 #define PI_DOUBLE		6.2831853071795864
 #define ONE_OVER_PI		0.3183098861837906
@@ -56,7 +55,8 @@ struct SceneObject
 
 float Random(vec3 pixel, vec3 scale, float seed)
 {
-	return fract(sin(dot(pixel + seed, scale)) * 43758.5453 + seed);
+	// NOTE: this function is sensitive to large seed values, so try to keep it small
+	return fract(sin(dot(pixel + vec3(seed), scale)) * 43758.5453 + seed);
 }
 
 float RayIntersectPlane(out vec3 n, vec4 p, vec3 start, vec3 dir)

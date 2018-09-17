@@ -612,19 +612,25 @@ bool LoadFromDDS(const char* file, DDS_Image_Info* outinfo)
 	outinfo->MipLevels	= (header.dwMipMapCount == 0 ? 1 : header.dwMipMapCount);
 	outinfo->Data		= 0;
 
+	// TODO: dwRGBBitCount is sometimes zero
 	if( header.ddspf.dwFlags & DDPF_FOURCC ) {
-		if( header.ddspf.dwFourCC == DDSPF_DXT1.dwFourCC )
+		if( header.ddspf.dwFourCC == DDSPF_DXT1.dwFourCC ) {
 			outinfo->Format = FORMAT_DXT1;
-		else if( header.ddspf.dwFourCC == DDSPF_DXT5.dwFourCC )
+		} else if( header.ddspf.dwFourCC == DDSPF_DXT5.dwFourCC ) {
 			outinfo->Format = FORMAT_DXT5;
-		else if( header.ddspf.dwFourCC == 0x70 )
+		} else if( header.ddspf.dwFourCC == 0x70 ) {
 			outinfo->Format = FORMAT_G16R16F;
-		else if( header.ddspf.dwFourCC == 0x71 )
+			header.ddspf.dwRGBBitCount = 32;
+		} else if( header.ddspf.dwFourCC == 0x71 ) {
 			outinfo->Format = FORMAT_A16B16G16R16F;
-		else if( header.ddspf.dwFourCC == 0x73 )
+			header.ddspf.dwRGBBitCount = 64;
+		} else if( header.ddspf.dwFourCC == 0x73 ) {
 			outinfo->Format = FORMAT_G32R32F;
-		else
-			goto _fail; // unsupported
+			header.ddspf.dwRGBBitCount = 64;
+		} else {
+			// unsupported
+			goto _fail;
+		}
 	} else if( header.ddspf.dwRGBBitCount == 32 ) {
 		outinfo->Format = FORMAT_A8R8G8B8;
 	} else if( header.ddspf.dwRGBBitCount == 24 ) {

@@ -292,7 +292,7 @@ void Render(float alpha, float elapsedtime)
 				for( int k = 0; k < GRID_SIZE; ++k )
 				{
 					if( currentcopy >= UNIFORM_COPIES ) {
-						if( rendermethod == 4 ) {
+						if( rendermethod == 4 || rendermethod == 2 ) {
 							sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 						} else if( rendermethod == 5 ) {
 							glBindBuffer(GL_UNIFORM_BUFFER, uniformbuffer3);
@@ -317,6 +317,13 @@ void Render(float alpha, float elapsedtime)
 						effect1->CommitChanges();
 					} else {
 						if( rendermethod == 2 ) {
+							if( sync != 0 ) {
+								glWaitSync(sync, 0, GL_TIMEOUT_IGNORED);
+								glDeleteSync(sync);
+
+								sync = 0;
+							}
+
 							glBindBuffer(GL_UNIFORM_BUFFER, uniformbuffer1);
 							glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(EffectUniformBlock), &uniformDTO);
 

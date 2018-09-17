@@ -70,6 +70,9 @@
     <ResourceCompile>
       <PreprocessorDefinitions>DX10</PreprocessorDefinitions>
     </ResourceCompile>
+    <Manifest>
+      <EnableDPIAwareness>true</EnableDPIAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -96,6 +99,9 @@
     <ResourceCompile>
       <PreprocessorDefinitions>DX10</PreprocessorDefinitions>
     </ResourceCompile>
+    <Manifest>
+      <EnableDPIAwareness>true</EnableDPIAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ResourceCompile Include="..\media\common.rc" />

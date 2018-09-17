@@ -11,6 +11,7 @@ SpectatorCamera::SpectatorCamera()
 	Fov			= FUNC_PROTO(DegreesToRadians)(80);
 	Near		= 0.1f;
 	Far			= 50.0f;
+	Speed		= MOVEMENT_SPEED;
 
 	state = 0;
 	finished = true;
@@ -37,6 +38,11 @@ void SpectatorCamera::FitToBox(const CLASS_PROTO(AABox)& box)
 void SpectatorCamera::GetEyePosition(float out[3])
 {
 	FUNC_PROTO(Vec3Assign)(out, smoothedposition);
+}
+
+void SpectatorCamera::GetOrientation(float out[3])
+{
+	FUNC_PROTO(Vec3Assign)(out, smoothedangles);
 }
 
 void SpectatorCamera::GetViewMatrix(float out[16])
@@ -124,7 +130,7 @@ void SpectatorCamera::Update(float dt)
 		FUNC_PROTO(Vec3Add)(diff, forward, right);
 
 		FUNC_PROTO(Vec3Normalize)(diff, diff);
-		FUNC_PROTO(Vec3Scale)(diff, diff, dt * MOVEMENT_SPEED);
+		FUNC_PROTO(Vec3Scale)(diff, diff, dt * Speed);
 	}
 
 	positioncurve.extend(diff);

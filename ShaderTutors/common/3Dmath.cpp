@@ -343,6 +343,27 @@ uint32_t FUNC_PROTO(Log2OfPow2)(uint32_t x)
 	return ret;
 }
 
+uint32_t FUNC_PROTO(ReverseBits32)(uint32_t bits)
+{
+	bits = (bits << 16) | (bits >> 16);
+	bits = ((bits & 0x00ff00ff) << 8) | ((bits & 0xff00ff00) >> 8);
+	bits = ((bits & 0x0f0f0f0f) << 4) | ((bits & 0xf0f0f0f0) >> 4);
+	bits = ((bits & 0x33333333) << 2) | ((bits & 0xcccccccc) >> 2);
+	bits = ((bits & 0x55555555) << 1) | ((bits & 0xaaaaaaaa) >> 1);
+
+	return bits;
+}
+
+float FUNC_PROTO(Vec2Dot)(const float a[2], const float b[2])
+{
+	return (a[0] * b[0] + a[1] * b[1]);
+}
+
+float FUNC_PROTO(Vec2Length)(const float a[2])
+{
+	return sqrtf(FUNC_PROTO(Vec2Dot)(a, a));
+}
+
 float FUNC_PROTO(Vec3Dot)(const float a[3], const float b[3])
 {
 	return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
@@ -373,6 +394,26 @@ float FUNC_PROTO(Vec4Dot)(const float a[4], const float b[4])
 float FUNC_PROTO(PlaneDistance)(const float p[4], const float v[3])
 {
 	return p[0] * v[0] + p[1] * v[1] + p[2] * v[2] + p[3];
+}
+
+void FUNC_PROTO(Vec2Assign)(float out[2], const float a[2])
+{
+	out[0] = a[0];
+	out[1] = a[1];
+}
+
+void FUNC_PROTO(Vec2Set)(float out[2], float x, float y)
+{
+	out[0] = x;
+	out[1] = y;
+}
+
+void FUNC_PROTO(Vec2Normalize)(float out[2], const float v[2])
+{
+	float il = 1.0f / FUNC_PROTO(Vec2Length)(v);
+
+	out[0] = v[0] * il;
+	out[1] = v[1] * il;
 }
 
 void FUNC_PROTO(Vec3Assign)(float out[3], const float a[3])

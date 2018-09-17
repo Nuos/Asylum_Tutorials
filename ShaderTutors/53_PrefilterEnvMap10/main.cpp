@@ -6,6 +6,8 @@
 #include "../common/common.h"
 
 //#define GENERATE_BRDF
+
+// see also https://seblagarde.wordpress.com/2012/06/10/amd-cubemapgen-for-physically-based-rendering/
 //#define GENERATE_DIFF_IRRAD
 //#define GENERATE_SPEC_IRRAD
 

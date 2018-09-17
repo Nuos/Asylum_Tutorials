@@ -32,12 +32,14 @@ public:
 	float Fov;
 	float Near;
 	float Far;
+	float Speed;
 
 	SpectatorCamera();
 
 	void FitToBox(const CLASS_PROTO(AABox)& box);
 
 	void GetEyePosition(float out[3]);
+	void GetOrientation(float out[3]);
 	void GetViewMatrix(float out[16]);
 	void GetProjectionMatrix(float out[16]);
 

@@ -31,6 +31,7 @@
 static const float FUNC_PROTO(_PI) = 3.141592f;
 static const float FUNC_PROTO(_2PI) = 6.283185f;
 static const float FUNC_PROTO(_HALF_PI) = 1.570796f;
+static const float FUNC_PROTO(_ONE_OVER_SQRT_2) = 0.7071067f;
 
 class CLASS_PROTO(Color)
 {
@@ -94,16 +95,57 @@ public:
 	float Farthest(float from[4]) const;
 };
 
+class Complex
+{
+public:
+	float a;
+	float b;
+
+	Complex() {
+		a = b = 0;
+	}
+
+	Complex(float re, float im) {
+		a = re;
+		b = im;
+	}
+
+	Complex operator +(const Complex& other) {
+		return Complex(a + other.a, b + other.b);
+	}
+
+	Complex operator -(const Complex& other) {
+		return Complex(a - other.a, b - other.b);
+	}
+
+	Complex operator *(const Complex& other) {
+		return Complex(a * other.a - b * other.b, b * other.a + a * other.b);
+	}
+
+	Complex& operator +=(const Complex& other) {
+		a += other.a;
+		b += other.b;
+
+		return *this;
+	}
+};
+
 int32_t FUNC_PROTO(ISqrt)(int32_t n);
 uint32_t FUNC_PROTO(NextPow2)(uint32_t x);
 uint32_t FUNC_PROTO(Log2OfPow2)(uint32_t x);
+uint32_t FUNC_PROTO(ReverseBits32)(uint32_t bits);
 
+float FUNC_PROTO(Vec2Dot)(const float a[2], const float b[2]);
+float FUNC_PROTO(Vec2Length)(const float a[2]);
 float FUNC_PROTO(Vec3Dot)(const float a[3], const float b[3]);
 float FUNC_PROTO(Vec3Length)(const float a[3]);
 float FUNC_PROTO(Vec3Distance)(const float a[3], const float b[3]);
 float FUNC_PROTO(Vec4Dot)(const float a[4], const float b[4]);
 float FUNC_PROTO(PlaneDistance)(const float p[4], const float v[3]);
 
+void FUNC_PROTO(Vec2Assign)(float out[2], const float a[2]);
+void FUNC_PROTO(Vec2Set)(float out[2], float x, float y);
+void FUNC_PROTO(Vec2Normalize)(float out[2], const float v[2]);
 void FUNC_PROTO(Vec3Assign)(float out[3], const float a[3]);
 void FUNC_PROTO(Vec3Set)(float out[3], float x, float y, float z);
 void FUNC_PROTO(Vec3Add)(float out[3], const float a[3], const float b[3]);

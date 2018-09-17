@@ -288,7 +288,8 @@ bool InitScene()
 		return false;
 	}
 
-	wglSwapInterval(1);
+	if( Quadron::qGLExtensions::WGL_EXT_swap_control )
+		wglSwapInterval(1);
 
 	glClearColor(0.0f, 0.0103f, 0.0707f, 1.0f);
 	glClearDepth(1.0);

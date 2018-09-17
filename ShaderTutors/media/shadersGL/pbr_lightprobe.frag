@@ -16,7 +16,7 @@ void main()
 {
 	vec3 n = normalize(wnorm);
 	vec3 v = normalize(vdir);
-	vec3 r = 2 * dot(v, n) * n - v;
+	vec3 r = 2.0 * dot(v, n) * n - v;
 
 	float ndotv = clamp(dot(n, v), 0.0, 1.0);
 	float miplevel = matParams.x * (NUM_MIPS - 1);

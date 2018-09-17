@@ -526,7 +526,6 @@ int main(int argc, char* argv[])
 	while( msg.message != WM_QUIT )
 	{
 		QueryPerformanceCounter(&qwTime);
-
 		current = (qwTime.QuadPart % tickspersec) / (double)tickspersec;
 
 		if (current < last)

@@ -42,6 +42,9 @@
     <None Include="..\media\shaders\pcss.fx">
       <Filter>shaders</Filter>
     </None>
+    <None Include="..\media\shaders\irregularpcf.fx">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\media\common.rc">

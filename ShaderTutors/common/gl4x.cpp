@@ -495,6 +495,12 @@ void OpenGLMesh::Draw()
 		DrawSubset(i);
 }
 
+void OpenGLMesh::DrawInstanced(GLuint numinstances)
+{
+	for( GLuint i = 0; i < numsubsets; ++i )
+		DrawSubsetInstanced(i, numinstances);
+}
+
 void OpenGLMesh::DrawSubset(GLuint subset, bool bindtextures)
 {
 	if( vertexlayout == 0 || numvertices == 0 )
@@ -538,6 +544,49 @@ void OpenGLMesh::DrawSubset(GLuint subset, bool bindtextures)
 			else
 				glDrawRangeElements(attr.PrimitiveType, attr.VertexStart, attr.VertexStart + attr.VertexCount - 1, attr.IndexCount, itype, (char*)0 + start);
 		}
+	}
+}
+
+void OpenGLMesh::DrawSubsetInstanced(GLuint subset, GLuint numinstances, bool bindtextures)
+{
+	// NOTE: use SSBO, dummy... (or modify this class)
+
+	if( vertexlayout == 0 || numvertices == 0 || numinstances == 0 )
+		return;
+
+	if( subsettable && subset < numsubsets )
+	{
+		const OpenGLAttributeRange& attr = subsettable[subset];
+		const OpenGLMaterial& mat = materials[subset];
+
+		if( !attr.Enabled )
+			return;
+
+		GLenum itype = (meshoptions & GLMESH_32BIT) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+		GLuint start = attr.IndexStart * ((meshoptions & GLMESH_32BIT) ? 4 : 2);
+
+		if( bindtextures )
+		{
+			if( mat.Texture )
+			{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, mat.Texture);
+			}
+
+			if( mat.NormalMap )
+			{
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, mat.NormalMap);
+			}
+		}
+
+		glBindVertexArray(vertexlayout);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexbuffer);
+
+		if( attr.IndexCount == 0 )
+			glDrawArraysInstanced(attr.PrimitiveType, attr.VertexStart, attr.VertexCount, numinstances);
+		else
+			glDrawElementsInstanced(attr.PrimitiveType, attr.IndexCount, itype, (char*)0 + start, numinstances);
 	}
 }
 
@@ -787,7 +836,7 @@ void OpenGLEffect::AddUniform(const char* name, GLuint location, GLuint count, G
 
 		floatsize += count;
 	}
-	else if( type == GL_INT || (type >= GL_INT_VEC2 && type <= GL_INT_VEC4) || type == GL_SAMPLER_2D || type == GL_SAMPLER_CUBE || type == GL_IMAGE_2D )
+	else if( type == GL_INT || (type >= GL_INT_VEC2 && type <= GL_INT_VEC4) || type == GL_SAMPLER_2D || type == GL_SAMPLER_BUFFER || type == GL_SAMPLER_CUBE || type == GL_IMAGE_2D )
 	{
 		uni.StartRegister = intsize;
 
@@ -916,7 +965,7 @@ void OpenGLEffect::QueryUniforms()
 			GLsizei namelength = 0;
 			char name[64];
 
-			glGetActiveUniformBlockName (program, i, 64, &namelength, name);
+			glGetActiveUniformBlockName(program, i, 64, &namelength, name);
 			assert(namelength < 64);
 
 			name[namelength] = 0;
@@ -1002,6 +1051,8 @@ void OpenGLEffect::CommitChanges()
 		case GL_INT:
 		case GL_SAMPLER_2D:
 		case GL_SAMPLER_CUBE:
+		case GL_SAMPLER_BUFFER:
+		case GL_IMAGE_2D:
 			glUniform1i(uni.Location, intdata[0]);
 			break;
 
@@ -1143,25 +1194,32 @@ OpenGLFramebuffer::OpenGLFramebuffer(GLuint width, GLuint height)
 
 OpenGLFramebuffer::~OpenGLFramebuffer()
 {
+	glBindFramebuffer(GL_FRAMEBUFFER, fboid);
+	
 	for( int i = 0; i < 8; ++i )
 	{
 		if( rendertargets[i].id != 0 )
 		{
-			if( rendertargets[i].type == 0 )
+			if( rendertargets[i].type == 0 ) {
 				glDeleteRenderbuffers(1, &rendertargets[i].id);
-			else
+			} else {
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, 0, 0);
 				glDeleteTextures(1, &rendertargets[i].id);
+			}
 		}
 	}
 
 	if( depthstencil.id != 0 )
 	{
-		if( depthstencil.type == 0 )
+		if( depthstencil.type == 0 ) {
 			glDeleteRenderbuffers(1, &depthstencil.id);
-		else
+		} else {
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 			glDeleteTextures(1, &depthstencil.id);
+		}
 	}
-
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDeleteFramebuffers(1, &fboid);
 }
 
@@ -1547,7 +1605,7 @@ bool GLCreateMesh(GLuint numvertices, GLuint numindices, GLuint options, OpenGLV
 	glmesh->subsettable->IndexCount		= numindices;
 	glmesh->subsettable->IndexStart		= 0;
 	glmesh->subsettable->PrimitiveType	= GLPT_TRIANGLELIST;
-	glmesh->subsettable->VertexCount	= 0;	// draw entire buffer
+	glmesh->subsettable->VertexCount	= (numindices > 0 ? 0 : numvertices);
 	glmesh->subsettable->VertexStart	= 0;
 	glmesh->subsettable->Enabled		= GL_TRUE;
 

@@ -86,7 +86,8 @@ void main()
 	float stepsize	= radius / NUM_STEPS;
 	float phi		= (params.x + noises.x) * PI;
 	float ao		= 0.0;
-	float currstep	= mod(params.y + noises.y, 1.0) * (stepsize - 1.0) + 1.0;
+	float division	= noises.y * stepsize;
+	float currstep	= 1.0 + division + 0.25 * stepsize * params.y;
 	float dist2, invdist, falloff, cosh;
 
 #ifdef NUM_DIRECTIONS

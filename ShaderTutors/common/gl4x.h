@@ -1,6 +1,6 @@
 
-#ifndef _GLEXT_H_
-#define _GLEXT_H_
+#ifndef _GL4X_H_
+#define _GL4X_H_
 
 #include <cassert>
 #include <cstdint>
@@ -120,6 +120,12 @@ struct OpenGLCommonVertex
 {
 	float x, y, z;
 	float nx, ny, nz;
+	float u, v;
+};
+
+struct OpenGLBillboardVertex
+{
+	float x, y, z;
 	float u, v;
 };
 
@@ -244,7 +250,9 @@ public:
 	bool LockIndexBuffer(GLuint offset, GLuint size, GLuint flags, void** data);
 
 	void Draw();
+	void DrawInstanced(GLuint numinstances);
 	void DrawSubset(GLuint subset, bool bindtextures = false);
+	void DrawSubsetInstanced(GLuint subset, GLuint numinstances, bool bindtextures = false);
 	void EnableSubset(GLuint subset, bool enable);
 	void GenerateTangentFrame();
 	void ReorderSubsets(GLuint newindices[]);

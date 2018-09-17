@@ -137,6 +137,7 @@ extern PFNGLGETVERTEXATTRIBFVPROC					glGetVertexAttribfv;
 extern PFNGLGETACTIVEUNIFORMBLOCKIVPROC				glGetActiveUniformBlockiv;
 extern PFNGLGETACTIVEUNIFORMBLOCKNAMEPROC			glGetActiveUniformBlockName;
 
+extern PFNGLBLENDEQUATIONPROC						glBlendEquation;
 extern PFNGLBLENDEQUATIONSEPARATEPROC				glBlendEquationSeparate;
 extern PFNGLBLENDFUNCSEPARATEPROC					glBlendFuncSeparate;
 extern PFNGLSTENCILFUNCSEPARATEPROC					glStencilFuncSeparate;
@@ -151,7 +152,10 @@ extern PFNGLENDQUERYPROC							glEndQuery;
 extern PFNGLGETQUERYOBJECTUIVPROC					glGetQueryObjectuiv;
 
 // 3.1
+extern PFNGLDRAWARRAYSINSTANCEDPROC					glDrawArraysInstanced;
 extern PFNGLDRAWELEMENTSINSTANCEDPROC				glDrawElementsInstanced;
+extern PFNGLTEXBUFFERPROC							glTexBuffer;
+extern PFNGLPRIMITIVERESTARTINDEXPROC				glPrimitiveRestartIndex;
 
 // 3.2
 extern PFNGLGENVERTEXARRAYSPROC						glGenVertexArrays;
@@ -196,6 +200,10 @@ extern PFNGLTRANSFORMFEEDBACKVARYINGSPROC			glTransformFeedbackVaryings;
 extern PFNGLPATCHPARAMETERIPROC						glPatchParameteri;
 extern PFNGLPATCHPARAMETERFVPROC					glPatchParameterfv;
 extern PFNGLUNIFORMSUBROUTINESUIVPROC				glUniformSubroutinesuiv;
+extern PFNGLBLENDEQUATIONIPROC						glBlendEquationi;
+extern PFNGLBLENDFUNCIPROC							glBlendFunci;
+extern PFNGLBLENDEQUATIONSEPARATEIPROC				glBlendEquationSeparatei;
+extern PFNGLBLENDFUNCSEPARATEIPROC					glBlendFuncSeparatei;
 
 // 4.1
 extern PFNGLCREATESHADERPROGRAMVPROC				glCreateShaderProgramv;
@@ -215,6 +223,10 @@ extern PFNGLPROGRAMUNIFORM3FPROC					glProgramUniform3f;
 extern PFNGLPROGRAMUNIFORM4FVPROC					glProgramUniform4fv;
 extern PFNGLPROGRAMUNIFORMMATRIX4FVPROC				glProgramUniformMatrix4fv;
 
+// 4.2
+extern PFNGLTEXSTORAGE2DPROC								glTexStorage2D;
+extern PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXBASEINSTANCEPROC	glDrawElementsInstancedBaseVertexBaseInstance;
+
 // 4.3
 extern PFNGLDISPATCHCOMPUTEPROC						glDispatchCompute;
 extern PFNGLDISPATCHCOMPUTEINDIRECTPROC				glDispatchComputeIndirect;
@@ -224,10 +236,7 @@ extern PFNGLGETPROGRAMBINARYPROC					glGetProgramBinary;
 extern PFNGLGETPROGRAMINTERFACEIVPROC				glGetProgramInterfaceiv;
 extern PFNGLSHADERSTORAGEBLOCKBINDINGPROC			glShaderStorageBlockBinding;
 extern PFNGLMULTIDRAWELEMENTSINDIRECTPROC			glMultiDrawElementsIndirect;
-extern PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXBASEINSTANCEPROC	glDrawElementsInstancedBaseVertexBaseInstance;
 
-extern PFNGLBLENDEQUATIONSEPARATEIPROC				glBlendEquationSeparatei;
-extern PFNGLBLENDFUNCSEPARATEIPROC					glBlendFuncSeparatei;
 extern PFNGLVERTEXATTRIBBINDINGPROC					glVertexAttribBinding;
 extern PFNGLVERTEXATTRIBFORMATPROC					glVertexAttribFormat;
 extern PFNGLVERTEXBINDINGDIVISORPROC				glVertexBindingDivisor;

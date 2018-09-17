@@ -3,9 +3,9 @@
 
 in vec3 my_Position;
 
-uniform vec3 eyePos;
-uniform mat4 matViewProj;
 uniform mat4 matWorld;
+uniform mat4 matViewProj;
+uniform vec3 eyePos;
 
 out vec3 view;
 

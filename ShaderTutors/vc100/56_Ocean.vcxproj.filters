@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\56_Ocean\main.cpp" />
+    <ClCompile Include="..\extern\qglextensions.cpp">
+      <Filter>extern</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\gl4x.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\othergl.cpp" />
+    <ClCompile Include="..\common\dds.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\3Dmath.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\56_Ocean\fft_test.cpp" />
+    <ClCompile Include="..\common\spectatorcamera.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\56_Ocean\quadtree.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="extern">
+      <UniqueIdentifier>{638c7da3-24dc-4d2f-b688-9283f29be83e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{ca697c53-88a7-4f0d-b3f4-529b3133419b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{7408df48-0c9f-4344-9f63-fcd80d2d9a41}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\extern\qglextensions.h">
+      <Filter>extern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\gl4x.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\extern\glcorearb.h">
+      <Filter>extern</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\dds.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\3Dmath.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\spectatorcamera.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\56_Ocean\quadtree.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\media\shadersGL\updatespectrum.comp">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersGL\fourier_dft.comp">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersGL\fourier_fft.comp">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersGL\ocean.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersGL\ocean.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersGL\sky.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersGL\sky.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersGL\creategradients.comp">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersGL\createdisplacement.comp">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\media\shadersGL\color.frag">
+      <Filter>shaders</Filter>
+    </None>
+  </ItemGroup>
+</Project>

@@ -20,6 +20,6 @@ void main()
 		}
 	}
 
-	color /= float(4 * (radius * radius + radius) + 1);
+	color /= (4.0 * float(radius * radius + radius) + 1.0);
 	my_FragColor0 = color;
 }
